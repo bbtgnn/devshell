@@ -1,0 +1,7 @@
+{
+	"name": "@devshell/client",
+	"exports": "./mod.ts",
+	"compilerOptions": {
+		"strict": true
+	}
+}

@@ -1,0 +1,28 @@
+# Dependencies / Deno
+node_modules/
+**/node_modules/
+deno.lock
+
+# Vendored Bun binary (optional; regenerate via scripts/vendor-bun.sh)
+apps/desktop/bin/
+apps/desktop/vendor/
+
+# Local overrides
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# Guest-project runtime marker (if ever written into a work tree under this repo)
+.devshell/runtime.json
+
+# Never commit clone/work caches (they live in OS app data; keep traps local)
+.scratch/
+.data/

@@ -1,0 +1,24 @@
+{
+	"name": "@devshell/desktop",
+	"exports": "./main.ts",
+	"desktop": {
+		"backend": "webview",
+		"app": {
+			"name": "Devshell",
+			"identifier": "dev.devshell.desktop"
+		}
+	},
+	"tasks": {
+		"desktop": "deno desktop --hmr --backend webview -A --no-check --include npm:isomorphic-git main.ts",
+		"smoke:resolve": "deno run -A smoke-resolve.ts",
+		"smoke:pipeline": "deno run -A smoke-pipeline.ts"
+	},
+	"imports": {
+		"isomorphic-git": "npm:isomorphic-git@1.42.2",
+		"isomorphic-git/http/node": "npm:isomorphic-git@1.42.2/http/node"
+	},
+	"compilerOptions": {
+		"lib": ["deno.window", "deno.ns"],
+		"strict": true
+	}
+}

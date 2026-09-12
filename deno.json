@@ -1,0 +1,13 @@
+{
+	"workspace": ["./apps/desktop", "./packages/client"],
+	"nodeModulesDir": "auto",
+	"minimumDependencyAge": "0",
+	"tasks": {
+		"desktop": "deno task --cwd apps/desktop desktop",
+		"smoke:resolve": "deno task --cwd apps/desktop smoke:resolve",
+		"smoke:pipeline": "deno task --cwd apps/desktop smoke:pipeline"
+	},
+	"compilerOptions": {
+		"strict": true
+	}
+}
