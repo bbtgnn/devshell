@@ -12,9 +12,13 @@ A comment earns its place only when the next reader would otherwise misread inte
 
 Commits, issues, and PR titles use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): summary` — e.g. `feat(desktop): …`, `fix(runner): …`, `docs(adr): …`, `chore: …`.
 
+### Durable ADRs
+
+An ADR records the design decision and why the alternatives lost. Paths, module names, and current call shapes belong in the code — they go stale inside an ADR.
+
 ## Reach when
 
 - **Domain** (naming Project, Work root, Data root, Bun engine, Guest app, Client package, Flavor, …): read [CONTEXT.md](CONTEXT.md). Resolve or change a term → update it there.
-- **Architecture** (Deno Desktop shell, Bun sidecar, isomorphic-git sync, preview `BrowserWindow`, rejecting Electrobun/browser chrome): read [docs/adr/](docs/adr/), start with [0001](docs/adr/0001-deno-desktop-shell-bun-sidecar.md). Record a hard-to-reverse trade-off → add an ADR.
+- **Architecture** (Deno Desktop shell, Bun sidecar, isomorphic-git sync, preview windows, rejecting Electrobun/browser chrome): read [docs/adr/](docs/adr/), start with [0001](docs/adr/0001-deno-desktop-shell-bun-sidecar.md). Hard-to-reverse trade-off → add a durable ADR.
 - **Run / smoke / data-dir overrides**: [README.md](README.md); tasks and desktop config live in the repo’s `deno.json` files.
 - **Handoff** (spike port, CMS monorepo boundary, what not to absorb): [HANDOFF.md](HANDOFF.md).
