@@ -1,10 +1,3 @@
-/**
- * Smoke — isomorphic-git sync → bun install → schema inspect (no Desktop UI).
- *
- *   deno task smoke:pipeline
- *
- * Re-run: second pass should log "cache hit → pull".
- */
 import { join } from "node:path";
 import { resolveAppRoot, resolveDataRoot } from "./paths.ts";
 import {

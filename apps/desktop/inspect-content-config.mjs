@@ -1,9 +1,4 @@
-/**
- * PROTOTYPE — load host content.config.ts via Vite SSR and evaluate Zod schemas.
- * Resolves `vite` from the target project's node_modules.
- *
- *   node inspect-content-config.mjs [projectRoot]
- */
+// Load host content.config via Vite SSR; resolve vite from the project.
 import { createRequire } from "node:module";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";

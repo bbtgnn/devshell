@@ -1,8 +1,3 @@
-/**
- * Smoke — resolve Bun without launching Deno Desktop.
- *
- *   deno task smoke:resolve
- */
 import { join } from "node:path";
 import { resolveAppRoot, resolveDataRoot } from "./paths.ts";
 import {
@@ -14,7 +9,7 @@ import {
 const HERE = resolveAppRoot();
 const DATA = resolveDataRoot();
 
-// Fake "directory named bun" must never win.
+// Trap: a directory named `bun` must never win resolveBunEngine.
 const trapDir = join(DATA, "trap-bun-dir", "bun");
 await Deno.mkdir(trapDir, { recursive: true });
 await Deno.writeTextFile(join(trapDir, "index.js"), "console.log('not a cli')\n");

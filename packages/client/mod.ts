@@ -1,4 +1,3 @@
-/** @devshell/client — stub; real helpers land in a later phase. */
 export type GitStatus = {
 	branch: string;
 	dirty: boolean;
@@ -8,7 +7,6 @@ export type GitStatus = {
 	remote: string;
 };
 
-/** Discover API base from DEVSHELL_API or .devshell/runtime.json — stub returns null. */
 export function getApiBase(): string | null {
 	return Deno.env.get("DEVSHELL_API")?.trim() || null;
 }

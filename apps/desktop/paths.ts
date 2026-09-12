@@ -1,14 +1,9 @@
-/**
- * App root (source tree) vs durable data root (clone cache / work dirs).
- * `deno desktop` may run from a read-only temp extract — prefer cwd when it
- * looks like apps/desktop.
- */
-
 import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-/** Directory containing main.ts / runner.ts (the desktop app sources). */
+// `deno desktop` may run from a read-only temp extract — prefer cwd when it
+// looks like apps/desktop; skip deno-compile-* extract paths.
 export function resolveAppRoot(): string {
 	const cwd = Deno.cwd();
 	if (existsSync(join(cwd, "main.ts")) && existsSync(join(cwd, "runner.ts"))) {
@@ -19,10 +14,6 @@ export function resolveAppRoot(): string {
 	return cwd;
 }
 
-/**
- * Durable clone + work cache. Override with DEVSHELL_DATA_DIR.
- * Default: macOS Application Support / XDG data home / Windows LOCALAPPDATA.
- */
 export function resolveDataRoot(): string {
 	const override = Deno.env.get("DEVSHELL_DATA_DIR")?.trim();
 	if (override) return override;

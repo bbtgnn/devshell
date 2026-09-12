@@ -1,10 +1,3 @@
-/**
- * Impure runner — isomorphic-git cache / Bun sidecar install / spawn.
- * Install/run always use a resolved Bun *executable* (never a directory named
- * bun). Clones live under the data root; re-runs pull instead of wiping.
- * No system `git` required for sync.
- */
-
 import fs, {
 	cpSync,
 	existsSync,
@@ -32,7 +25,7 @@ export type ParsedGithub = {
 
 export type BunEngine = BunEngineInfo;
 
-/** True for a regular file that is executable (dirs can pass X_OK alone on macOS). */
+// Dirs can pass X_OK alone on macOS — require a regular file.
 export function isExecutableFile(path: string): boolean {
 	try {
 		const st = Deno.statSync(path);
@@ -44,7 +37,7 @@ export function isExecutableFile(path: string): boolean {
 	}
 }
 
-/** PATH lookup — Deno.which is not available in all desktop builds. */
+// Deno.which is not available in all desktop builds.
 function whichOnPath(cmd: string): string | null {
 	const pathEnv = Deno.env.get("PATH") ?? "";
 	for (const dir of pathEnv.split(":")) {
@@ -59,13 +52,7 @@ function systemNodePresent(): boolean {
 	return Boolean(whichOnPath("node") || whichOnPath("npm"));
 }
 
-/**
- * Prefer a real Bun CLI binary. Never treat a JS bundle directory named `bun`
- * as the CLI (EACCES posix_spawn footgun from Electrobun spike).
- *
- * Order: DEVSHELL_BUN_PATH → vendor/bin beside app → app-bundle siblings of
- * Deno.execPath → BUN_INSTALL/bin/bun → PATH bun.
- */
+// Never treat a JS bundle directory named `bun` as the CLI (EACCES posix_spawn).
 export function resolveBunEngine(appRoot: string): BunEngine {
 	const nodePresent = systemNodePresent();
 
@@ -99,7 +86,7 @@ export function resolveBunEngine(appRoot: string): BunEngine {
 			join(execDir, "..", "MacOS", "bun"),
 		);
 	} catch {
-		/* Deno.execPath unavailable — skip */
+		// Deno.execPath unavailable
 	}
 
 	for (const candidate of embeddedCandidates) {
@@ -160,7 +147,6 @@ export function formatBunEngine(engine: BunEngine): string {
 	return `${engine.source} → ${engine.path} (systemNode=${engine.systemNodePresent})`;
 }
 
-/** Accepts owner/repo or full github.com URLs, including /tree/<branch>/<subdir>. */
 export function parseGithubInput(input: string, subdirectory = ""): ParsedGithub {
 	const raw = input.trim();
 	let owner = "";
@@ -257,7 +243,6 @@ function onGitProgress(
 	};
 }
 
-/** Durable clone under dataRoot/clones/<owner>__<repo>/ — keeps .git for pulls. */
 export async function ensureRepo(
 	parsed: ParsedGithub,
 	dataRoot: string,
@@ -342,10 +327,7 @@ export async function ensureRepo(
 	}
 }
 
-/**
- * Subdirectory monorepo packages are copied into dataRoot/work/… so Vite/tsc
- * do not walk up into monorepo root configs. Non-subdir repos use the clone.
- */
+// Copy monorepo subdirs so Vite/tsc do not walk up into root configs.
 export function materializeWorkDir(
 	cloneDir: string,
 	subdirectory: string,
@@ -370,7 +352,6 @@ export function materializeWorkDir(
 	return workDir;
 }
 
-/** Informational only — install/run always use resolved Bun. */
 export function detectPackageManager(dir: string): PackageManager {
 	if (existsSync(join(dir, "bun.lockb")) || existsSync(join(dir, "bun.lock"))) {
 		return "bun";
@@ -486,7 +467,7 @@ export function spawnLiving(
 			try {
 				proc.kill("SIGTERM");
 			} catch {
-				/* already dead */
+				// already dead
 			}
 		},
 		wait: proc.status,

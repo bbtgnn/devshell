@@ -1,13 +1,3 @@
-/**
- * Devshell desktop — Deno Desktop shell + Bun sidecar.
- *
- * Sync a GitHub repo, bun install / bun run dev, open a native preview window.
- * Requires Deno ≥ 2.9 (`deno desktop`). Docs: https://docs.deno.com/runtime/desktop/
- *
- * Run from apps/desktop:
- *   deno task desktop
- */
-
 import { join } from "node:path";
 import {
 	canStart,

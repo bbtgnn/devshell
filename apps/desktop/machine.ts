@@ -1,8 +1,3 @@
-/**
- * Session state machine (no DOM, no Deno APIs).
- * Phases for sync → detect → install → run → preview.
- */
-
 export type Phase =
 	| "idle"
 	| "cloning"
@@ -14,7 +9,7 @@ export type Phase =
 	| "failed"
 	| "stopped";
 
-/** Lockfile PM is informational only — spike always installs/runs with Bun. */
+// Lockfile PM is informational — install/run always use Bun.
 export type PackageManager = "bun" | "pnpm" | "yarn" | "npm" | "deno";
 
 export type BunEngineSource = "embedded" | "path-which";

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Copy a real Bun CLI binary into bin/bun so resolveBunEngine reports
-# source=embedded (never a directory named bun).
+# Real Bun CLI file into bin/bun (never a directory named bun).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEST="$ROOT/bin/bun"
