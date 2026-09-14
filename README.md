@@ -34,7 +34,7 @@ Or from `apps/desktop`:
 deno task desktop
 ```
 
-Default demo target: [Astro blog example](https://github.com/withastro/astro/tree/main/examples/blog).
+Default demo target: [Astro’s blog example](https://github.com/withastro/astro/tree/main/examples/blog) (any GitHub JS Project with a `dev` script works).
 
 ### Headless smokes
 

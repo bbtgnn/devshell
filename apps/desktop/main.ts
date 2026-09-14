@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import {
 	canStart,
 	canStop,
@@ -309,9 +308,7 @@ function controlPage(): string {
       <button id="btn-stop" class="secondary">Stop</button>
       <button id="btn-reset" class="secondary">Reset</button>
       <button id="btn-reopen" class="secondary">Re-open preview</button>
-      <button id="btn-schemas" class="secondary">Inspect content.config schemas</button>
     </div>
-    <pre id="schema-out" style="margin-top:0.85rem;max-height:180px;display:none"></pre>
   </section>
 
   <section>
@@ -335,9 +332,9 @@ const scenarios = [
   {
     id: "happy",
     name: "Happy path",
-    blurb: "Sync Astro blog via isomorphic-git (clone or pull from data cache), materialize monorepo subdir, bun install via sidecar, bun run dev, open native webview. Confirm bunEngine.source in state.",
+    blurb: "Sync the demo Project via isomorphic-git (clone or pull from data cache), materialize monorepo subdir if needed, bun install via sidecar, bun run dev, open native preview. Confirm bunEngine.source in state.",
     steps: [
-      { label: "1. Start pipeline (Astro blog + Zod collections)", action: "startDefault" },
+      { label: "1. Start pipeline (demo Project)", action: "startDefault" },
       { label: "2. Re-open preview window", action: "reopen", needsUrl: true },
     ],
   },
@@ -409,7 +406,6 @@ function renderState(s) {
   document.getElementById("btn-start").disabled = !s.canStart;
   document.getElementById("btn-stop").disabled = !s.canStop;
   document.getElementById("btn-reopen").disabled = !s.previewUrl;
-  document.getElementById("btn-schemas").disabled = !s.workDir;
   renderScenario();
 }
 
@@ -475,17 +471,6 @@ document.getElementById("btn-start").onclick = async () => {
 document.getElementById("btn-stop").onclick = () => bindings.stop();
 document.getElementById("btn-reset").onclick = () => bindings.reset();
 document.getElementById("btn-reopen").onclick = () => bindings.reopenPreview();
-document.getElementById("btn-schemas").onclick = async () => {
-  const out = document.getElementById("schema-out");
-  out.style.display = "block";
-  out.textContent = "Loading content.config via Vite (bun sidecar)…";
-  try {
-    const result = await bindings.inspectSchemas();
-    out.textContent = typeof result === "string" ? result : JSON.stringify(result, null, 2);
-  } catch (err) {
-    out.textContent = "Failed: " + (err && err.message ? err.message : String(err));
-  }
-};
 document.getElementById("btn-copy-logs").onclick = async () => {
   const status = document.getElementById("copy-status");
   try {
@@ -548,31 +533,6 @@ function bindWindow(win: DesktopWindow) {
 		if (!status.success) throw new Error(`pbcopy exited ${status.code}`);
 		return { ok: true, lines: state.logTail.length, bytes: text.length };
 	});
-	win.bind("inspectSchemas", async () => {
-		if (!state.workDir) throw new Error("No workDir — run the pipeline first");
-		const engine = state.bunEngine ?? resolveBunEngine(HERE);
-		const script = join(HERE, "inspect-content-config.mjs");
-		dispatch({
-			type: "log",
-			line: `inspect schemas via ${engine.path} in ${state.workDir}`,
-		});
-		const result = await runCaptured(
-			[engine.path, script, state.workDir],
-			{
-				cwd: state.workDir,
-				onLine: (line) => dispatch({ type: "log", line }),
-			},
-		);
-		const raw = (result.stdout || result.stderr || "").trim();
-		try {
-			return JSON.parse(raw);
-		} catch {
-			return {
-				ok: false,
-				error: raw || `inspect exited ${result.code}`,
-			};
-		}
-	});
 }
 
 if (!BrowserWindow) {
@@ -613,7 +573,7 @@ previewWin.navigate(
 <title>Waiting</title>
 <body style="font:16px/1.4 system-ui;padding:2rem;background:#111;color:#eee">
 <h1>Preview</h1>
-<p>Start the pipeline from the control window. The Astro URL will open here.</p>
+<p>Start the pipeline from the control window. The Project local URL will open here.</p>
 </body>`),
 );
 

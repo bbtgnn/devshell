@@ -6,7 +6,7 @@ Desktop orchestrator that syncs a GitHub-backed project, runs its install/dev to
 
 **Devshell**:
 The desktop product that owns control UI, git sync, Bun install/run, and preview windows for a Project.
-_Avoid_: CMS shell, authoring shell, Electrobun app
+_Avoid_: Electrobun app
 
 **Project**:
 A GitHub repository (optional subdirectory) or local path that Devshell opens, syncs, and runs.
@@ -33,7 +33,6 @@ The Devshell window for open/sync/run/stop, status, and logs.
 
 **Guest app**:
 The Project's running `dev` process, which may call Devshell over a loopback API later.
-_Avoid_: CMS package, `@cms/*`
 
 **Client package**:
 Optional `@devshell/client` — types and thin fetch helpers for the Guest app; no git or window logic.

@@ -1,7 +1,7 @@
 # Prior art: local repo → install → run → preview orchestrators
 
 **Question:** What products already cover substantial parts of the **Devshell** loop (desktop app clones a GitHub repo, installs/runs `dev` with an embedded toolchain, opens native preview window(s) on a detected localhost URL, driven by a repo-root config, with optional branded single-repo builds)?  
-**Product frame:** Working name **Devshell**. Deno Desktop + Bun sidecar + isomorphic-git. Guest apps may open any preview path (including something like `/_cms`); Devshell does not own CMS packages.  
+**Product frame:** Working name **Devshell**. Deno Desktop + Bun sidecar + isomorphic-git. Orchestrates any git-backed JS Project with a `dev` script; preview paths are just URLs.  
 **Method:** Official product docs, first-party sites, and GitHub READMEs. Stars/licenses from GitHub API as of **2026-09-12**. Secondary blog roundups used only as discovery pointers, not as claim sources.
 
 ## Verdict
@@ -66,7 +66,7 @@ Legend: **Y** = first-party docs/README claim it; **P** = partial / adjacent; **
 
 **Local (LocalWP)** — First-party positioning: one-click local WordPress with SSL, hot-swap PHP/NGINX/Apache, import/export zips, Blueprints, Local Connect to Flywheel/WP Engine, Live Links for sharing ([features](https://localwp.com/features/), [site](https://localwp.com/)). “Clone” means **clone a Local site** (files + DB + URL rewrite), not `git clone` of an arbitrary repo. Closest proof that **non-terminal users will download a desktop app to run a site**.
 
-**WordPress Studio (Automattic)** — OSS Electron app: “requires no external dependencies,” powered by WordPress Playground; Sync, cloud preview sites, Studio CLI ([README](https://raw.githubusercontent.com/Automattic/studio/trunk/README.md), [docs](https://developer.wordpress.com/docs/developer-tools/studio/), [product](https://developer.wordpress.com/studio/)). Same category as Local, with a modern WASM runtime story. Still **WordPress-shaped**, not “any Astro git URL.”
+**WordPress Studio (Automattic)** — OSS Electron app: “requires no external dependencies,” powered by WordPress Playground; Sync, cloud preview sites, Studio CLI ([README](https://raw.githubusercontent.com/Automattic/studio/trunk/README.md), [docs](https://developer.wordpress.com/docs/developer-tools/studio/), [product](https://developer.wordpress.com/studio/)). Same category as Local, with a modern WASM runtime story. Still **WordPress-shaped**, not “any git-backed JS Project.”
 
 **Laravel Herd** — Native app ships PHP, nginx, dnsmasq, Node, Composer; parks `~/Herd` → `*.test`; `herd open` opens the browser ([install docs](https://herd.laravel.com/docs/macos/getting-started/installation), [Laravel guide](https://herd.laravel.com/docs/macos/guides/laravel)). Explicitly: existing apps are **checked out with system git**, then linked. **`herd.yml`** shares PHP version, TLS, aliases, Pro services (`herd init`) ([herd.yml docs](https://herd.laravel.com/docs/macos/sites/herd-yaml)). Excellent **repo-root config** prior art for team onboarding; not a git+preview orchestrator.
 
@@ -142,8 +142,8 @@ Electron apps that wrap `http://localhost:…` in a phone frame (Expo Desktop Go
 ### White space (where Devshell sits)
 
 1. **Native desktop that treats a GitHub URL as the unit of product**, not a folder the user already cloned—especially a **locked URL** for end clients (no repo picker).
-2. **Embedded JS toolchain (Bun) + pure-JS git** so the happy path needs neither Node nor git on PATH—Herd/Studio do this for **PHP/WASM WP**, not for arbitrary `package.json` / Astro monorepos.
-3. **Shell-owned multi-window preview** (control/logs vs site vs `/_cms`) rather than “open Chrome” or “open VS Code Simple Browser.”
+2. **Embedded JS toolchain (Bun) + pure-JS git** so the happy path needs neither Node nor git on PATH—Herd/Studio do this for **PHP/WASM WP**, not for arbitrary `package.json` / JS monorepos.
+3. **Shell-owned multi-window preview** (control/logs vs one or more Project URLs) rather than “open Chrome” or “open VS Code Simple Browser.”
 4. **Thin `@devshell/client` / loopback contract** so the **running site** can ask the shell for git status / open-preview—rare outside IDE extension APIs; hobby launchers expose loopback APIs for **the launcher UI**, not for the guest app.
 5. **Config that is launcher-shaped** (install, scripts, url, windows, git watch)—closer to `.launcher.yml` + Gitpod `ports.onOpen` than to `devcontainer.json` or `netlify.toml`.
 
@@ -171,7 +171,7 @@ Electron apps that wrap `http://localhost:…` in a phone frame (Expo Desktop Go
 | No system git | isomorphic-git docs; contrast GitButler | Keep auth story (device OAuth) explicit |
 | No system Node | Herd/Studio “ship the runtime”; StackBlitz WebContainers | Prefer **embedded Bun sidecar** (ADR) over browser WASM for native windows |
 | Loopback API + client package | launcher.dev loopback security notes | Scope API to guest app needs (git status, open-preview), not remote RCE |
-| CMS preview path | — | Stay orchestration-only; `/_cms` is just another URL (product constraint) |
+| Guest preview paths | — | Stay orchestration-only; any path is just another URL |
 
 **Practical takeaway:** Pitch Devshell as **“LocalWP for a git-backed JS site”** (distribution metaphor) plus **“Gitpod preview semantics on the desktop”** (runtime metaphor)—not as a new IDE and not as another port scanner. Defend novelty on **composition and the branded client flavor**, not on any single feature.
 
