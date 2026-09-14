@@ -14,6 +14,7 @@
 		"smoke:bun-engine": "deno run -A smoke-bun-engine.ts",
 		"smoke:bun-download": "deno run -A smoke-bun-download.ts",
 		"smoke:pipeline": "deno run -A smoke-pipeline.ts",
+		"smoke:session": "deno run -A smoke-session.ts",
 		"smoke:process-tree": "deno run -A smoke-process-tree.ts"
 	},
 	"imports": {

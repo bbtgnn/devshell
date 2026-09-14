@@ -1,6 +1,5 @@
-import { resolveDataRoot } from "./os/mod.ts";
+import { resolveDataRoot, runCaptured } from "./os/mod.ts";
 import { ensureBunEngine } from "./bun-engine.ts";
-import { bunInstallCommand, runCaptured } from "./runner.ts";
 import { syncProject } from "./project-sync.ts";
 
 const DATA = resolveDataRoot();
@@ -18,7 +17,7 @@ const synced = await syncProject(DEFAULT, "", DATA, (line) =>
 );
 console.log("sync action:", synced.action, "→", synced.workDir);
 
-const install = await runCaptured(bunInstallCommand(engine), {
+const install = await runCaptured([engine.path, "install"], {
 	cwd: synced.workDir,
 	onLine: (line) => console.log("  ", line),
 });

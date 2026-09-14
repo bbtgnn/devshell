@@ -1,24 +1,6 @@
-import {
-	canStart,
-	canStop,
-	initialState,
-	reduce,
-	type Action,
-	type SessionState,
-} from "./machine.ts";
-import {
-	resolveDataRoot,
-	spawnLiving,
-	type LivingProcess,
-} from "./os/mod.ts";
-import {
-	bunDevCommand,
-	bunInstallCommand,
-	extractLocalUrl,
-	runCaptured,
-} from "./runner.ts";
+import { resolveDataRoot } from "./os/mod.ts";
 import { ensureBunEngine } from "./bun-engine.ts";
-import { listCachedRepos, syncProject } from "./project-sync.ts";
+import { createProjectSession } from "./project-session.ts";
 
 // Deno.BrowserWindow ships with `deno desktop` but isn't in stable lib types yet.
 type DesktopWindow = {
@@ -44,135 +26,7 @@ const DATA_ROOT = resolveDataRoot();
 const DEFAULT_REPO =
 	"https://github.com/withastro/astro/tree/main/examples/blog";
 
-let state: SessionState = initialState();
-let living: LivingProcess | null = null;
-let runToken = 0;
 let previewWin!: DesktopWindow;
-
-function dispatch(action: Action): SessionState {
-	state = reduce(state, action);
-	console.log(`[state] ${state.phase}`, {
-		repoUrl: state.repoUrl,
-		bunEngine: state.bunEngine,
-		previewUrl: state.previewUrl,
-		error: state.error,
-		lastChanged: state.lastChanged,
-	});
-	return state;
-}
-
-function snapshot(s: SessionState) {
-	return {
-		...s,
-		canStart: canStart(s),
-		canStop: canStop(s),
-	};
-}
-
-async function stopLiving() {
-	const current = living;
-	living = null;
-	if (current) await current.stop();
-}
-
-async function runPipeline(repoUrl: string, subdirectory = "") {
-	const token = ++runToken;
-	await stopLiving();
-	dispatch({ type: "start", repoUrl, subdirectory });
-
-	try {
-		const engine = await ensureBunEngine(DATA_ROOT, {
-			onProgress: (line) => {
-				if (token !== runToken) return;
-				dispatch({ type: "log", line });
-			},
-		});
-		dispatch({
-			type: "log",
-			line: `bunEngine ${engine.path}`,
-		});
-
-		const synced = await syncProject(
-			repoUrl,
-			subdirectory,
-			DATA_ROOT,
-			(line) => {
-				if (token !== runToken) return;
-				dispatch({ type: "log", line });
-			},
-		);
-		if (token !== runToken) return;
-		dispatch({ type: "cached_repos", repos: synced.repos });
-		dispatch({
-			type: "log",
-			line:
-				synced.action === "pulled"
-					? `cache hit → pull (${synced.workDir})`
-					: `fresh clone (${synced.workDir})`,
-		});
-
-		const dir = synced.workDir;
-		const installCmd = bunInstallCommand(engine);
-		const devCmd = bunDevCommand(engine, dir);
-		dispatch({
-			type: "ready",
-			workDir: dir,
-			devCommand: devCmd.join(" "),
-			bunEngine: engine,
-		});
-
-		const install = await runCaptured(installCmd, {
-			cwd: dir,
-			onLine: (line) => {
-				if (token !== runToken) return;
-				dispatch({ type: "log", line });
-			},
-		});
-		if (token !== runToken) return;
-		if (!install.success) {
-			throw new Error(install.stderr || install.stdout || "bun install failed");
-		}
-
-		dispatch({ type: "phase", phase: "starting" });
-		dispatch({ type: "log", line: `spawn ${devCmd.join(" ")}` });
-		dispatch({ type: "phase", phase: "waiting_for_url" });
-
-		let found: string | null = null;
-		living = spawnLiving(devCmd, {
-			cwd: dir,
-			onChunk: (text) => {
-				if (token !== runToken) return;
-				for (const line of text.split(/\r?\n/)) {
-					if (line.trim()) dispatch({ type: "log", line });
-				}
-				const url = extractLocalUrl(text);
-				if (url && !found) {
-					found = url;
-					dispatch({ type: "preview_url", url });
-					openPreview(url);
-				}
-			},
-		});
-
-		void living.exited.then((status) => {
-			if (token !== runToken) return;
-			if (status.stopped) return;
-			if (state.phase === "previewing" || state.phase === "waiting_for_url") {
-				dispatch({
-					type: "fail",
-					error: `dev process exited (${status.code})`,
-				});
-			}
-		});
-	} catch (err) {
-		if (token !== runToken) return;
-		await stopLiving();
-		dispatch({
-			type: "fail",
-			error: err instanceof Error ? err.message : String(err),
-		});
-	}
-}
 
 function openPreview(url: string) {
 	previewWin.setTitle(`Preview — ${url}`);
@@ -180,6 +34,11 @@ function openPreview(url: string) {
 	previewWin.show();
 	previewWin.focus();
 }
+
+const session = createProjectSession({
+	dataRoot: DATA_ROOT,
+	onPreviewUrl: openPreview,
+});
 
 function controlPage(): string {
 	return `<!doctype html>
@@ -470,25 +329,17 @@ setInterval(() => bindings.pollState().then(renderState), 350);
 }
 
 function bindWindow(win: DesktopWindow) {
-	win.bind("pollState", () => snapshot(state));
+	win.bind("pollState", () => session.snapshot());
 	win.bind("start", (payload: unknown) => {
 		const p = payload as { repoUrl: string; subdirectory?: string };
-		void runPipeline(p.repoUrl, p.subdirectory ?? "");
-		return snapshot(state);
+		return session.start(p.repoUrl, p.subdirectory ?? "");
 	});
-	win.bind("stop", () => {
-		runToken++;
-		void stopLiving();
-		return snapshot(dispatch({ type: "stop" }));
-	});
-	win.bind("reset", () => {
-		runToken++;
-		void stopLiving();
-		return snapshot(dispatch({ type: "reset" }));
-	});
+	win.bind("stop", () => session.stop());
+	win.bind("reset", () => session.reset());
 	win.bind("reopenPreview", () => {
-		if (state.previewUrl) openPreview(state.previewUrl);
-		return snapshot(state);
+		const snap = session.snapshot();
+		if (snap.previewUrl) openPreview(snap.previewUrl);
+		return snap;
 	});
 }
 
@@ -501,7 +352,6 @@ if (!BrowserWindow) {
 
 await Deno.mkdir(DATA_ROOT, { recursive: true });
 console.log(`data root: ${DATA_ROOT}`);
-dispatch({ type: "cached_repos", repos: listCachedRepos(DATA_ROOT) });
 
 try {
 	const engine = await ensureBunEngine(DATA_ROOT, {
@@ -546,7 +396,7 @@ Deno.serve(async (req) => {
 		});
 	}
 	if (url.pathname === "/api/state") {
-		return Response.json(snapshot(state));
+		return Response.json(session.snapshot());
 	}
 	return new Response("Not found", { status: 404 });
 });

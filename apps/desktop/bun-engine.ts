@@ -1,7 +1,6 @@
 import { existsSync } from "@std/fs";
 import { dirname, join } from "@std/path";
 import { unzipSync } from "fflate";
-import type { BunEngineInfo } from "./machine.ts";
 import {
 	BUN_ENGINE_VERSION,
 	bunReleaseUrl,
@@ -14,6 +13,10 @@ import {
 	isExecutableFile,
 	pathListSeparator,
 } from "./os/mod.ts";
+
+export type BunEngineInfo = {
+	path: string;
+};
 
 export {
 	BUN_ENGINE_VERSION,

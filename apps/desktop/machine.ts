@@ -1,6 +1,5 @@
+import type { BunEngineInfo } from "./bun-engine.ts";
 import type { CachedRepo } from "./project-sync.ts";
-
-export type { CachedRepo };
 
 export type Phase =
 	| "idle"
@@ -11,10 +10,6 @@ export type Phase =
 	| "previewing"
 	| "failed"
 	| "stopped";
-
-export type BunEngineInfo = {
-	path: string;
-};
 
 export type SessionState = {
 	phase: Phase;

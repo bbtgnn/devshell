@@ -41,6 +41,10 @@ _Avoid_: embedded browser chrome, system browser tab (unless deliberately opened
 **Control window**:
 The Devshell window for open/sync/run/stop, status, and logs.
 
+**Project session**:
+The module that opens a Project end-to-end: resolve Bun engine, sync into the Work root, install, run Guest `dev`, and emit preview URL, logs, terminal phases, and cancel. Control starts/stops/reads a snapshot; Preview window chrome stays outside.
+_Avoid_: treating Control bindings or `main` as the pipeline owner
+
 **Guest app**:
 The Project's running `dev` process, which may call Devshell over a loopback API later.
 
