@@ -1,5 +1,4 @@
 import { resolveDataRoot } from "./os/mod.ts";
-import { ensureBunEngine } from "./bun-engine.ts";
 import { createProjectSession } from "./project-session.ts";
 import { bindControlWindow, controlPageHtml } from "./control-window.ts";
 import {
@@ -35,7 +34,7 @@ await Deno.mkdir(DATA_ROOT, { recursive: true });
 console.log(`data root: ${DATA_ROOT}`);
 
 try {
-	const engine = await ensureBunEngine(DATA_ROOT, {
+	const engine = await session.warm({
 		onProgress: (line) => console.log(line),
 	});
 	console.log(`bunEngine at boot: ${engine.path}`);

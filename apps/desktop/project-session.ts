@@ -44,7 +44,12 @@ export type ProjectSessionOptions = {
 	onPreviewUrl?: (url: string) => void;
 };
 
+export type WarmOptions = {
+	onProgress?: (line: string) => void;
+};
+
 export type ProjectSession = {
+	warm: (opts?: WarmOptions) => Promise<BunEngineInfo>;
 	start: (repoUrl: string, subdirectory?: string) => ProjectSessionSnapshot;
 	stop: () => ProjectSessionSnapshot;
 	reset: () => ProjectSessionSnapshot;
@@ -377,6 +382,11 @@ export function createProjectSession(
 	}
 
 	return {
+		warm(opts?: WarmOptions) {
+			return ensureBunEngine(dataRoot, {
+				onProgress: opts?.onProgress,
+			});
+		},
 		start(repoUrl: string, subdirectory = "") {
 			const token = ++runToken;
 			const snap = dispatch({ type: "start", repoUrl, subdirectory });

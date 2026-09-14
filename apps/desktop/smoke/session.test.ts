@@ -12,6 +12,8 @@ Deno.test("project session start / stop / fail", async () => {
 		onPreviewUrl: (url) => previewUrls.push(url),
 	});
 
+	assertEquals(typeof session.warm, "function");
+
 	const idle = session.snapshot();
 	assertEquals(idle.phase, "idle");
 	assert(idle.canStart);
