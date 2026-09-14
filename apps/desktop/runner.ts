@@ -56,9 +56,7 @@ function systemNodePresent(): boolean {
 export function resolveBunEngine(appRoot: string): BunEngine {
 	const nodePresent = systemNodePresent();
 
-	const envPath =
-		Deno.env.get("DEVSHELL_BUN_PATH")?.trim() ||
-		Deno.env.get("PROTOTYPE_BUN_PATH")?.trim();
+	const envPath = Deno.env.get("DEVSHELL_BUN_PATH")?.trim();
 	if (envPath) {
 		if (!isExecutableFile(envPath)) {
 			throw new Error(

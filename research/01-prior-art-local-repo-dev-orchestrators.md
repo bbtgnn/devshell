@@ -1,7 +1,7 @@
 # Prior art: local repo → install → run → preview orchestrators
 
 **Question:** What products already cover substantial parts of the **Devshell** loop (desktop app clones a GitHub repo, installs/runs `dev` with an embedded toolchain, opens native preview window(s) on a detected localhost URL, driven by a repo-root config, with optional branded single-repo builds)?  
-**Product frame:** Working name **Devshell**. App: `apps/desktop/` (Deno Desktop + Bun sidecar + isomorphic-git). ADR: [`docs/adr/0001-deno-desktop-shell-bun-sidecar.md`](../docs/adr/0001-deno-desktop-shell-bun-sidecar.md). Does **not** import CMS packages; Astro `/_cms` is just another preview path if present.  
+**Product frame:** Working name **Devshell**. Deno Desktop + Bun sidecar + isomorphic-git. Guest apps may open any preview path (including something like `/_cms`); Devshell does not own CMS packages.  
 **Method:** Official product docs, first-party sites, and GitHub READMEs. Stars/licenses from GitHub API as of **2026-09-12**. Secondary blog roundups used only as discovery pointers, not as claim sources.
 
 ## Verdict
@@ -35,7 +35,7 @@ Legend: **Y** = first-party docs/README claim it; **P** = partial / adjacent; **
 
 | Product | Clone/sync | Install/run | Preview window(s) | Repo config | Git status → app | Branded single-repo | No system Node/git | Maturity | Stack / license |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Devshell (target)** | Y (isomorphic-git) | Y (embedded Bun) | Y (native windows) | Y (`devshell.json`) | Y (loopback API) | Y (flavor) | Y (goal) | Spike | Deno Desktop + Bun |
+| **Devshell (target)** | Y (isomorphic-git) | Y (embedded Bun) | Y (native windows) | Y (`devshell.json`) | Y (loopback API) | Y (flavor) | Y (goal) | early | Deno Desktop + Bun |
 | **[Local (LocalWP)](https://localwp.com/)** | P (import zip / clone site files; Connect pull) | Y (ships PHP/MySQL/Nginx/Apache) | P (opens site; Live Links) | N (app-managed sites) | N | P (WP-only product brand) | Y (no PHP stack install) | Product, 1M+ downloads claimed | Desktop; proprietary |
 | **[WordPress Studio](https://developer.wordpress.com/studio/)** | P (import / Sync pull; not “paste any git URL”) | Y (Playground / no external deps) | P (local site + cloud preview links) | P (Blueprints) | N | Y (WP-branded desktop) | Y | Product; ~516★ OSS | Electron; GPL-2.0 |
 | **[Laravel Herd](https://herd.laravel.com/)** | N (park/link folders; docs say clone yourself) | Y (ships PHP/nginx/Node/Composer) | P (`herd open` → browser) | Y (`herd.yml`) | N | P (Laravel-branded) | Y for PHP; ships Node | Product (Free/Pro) | Native macOS/Windows |
@@ -217,5 +217,4 @@ Electron apps that wrap `http://localhost:…` in a phone frame (Expo Desktop Go
 - Devbox: [jetify-com/devbox](https://github.com/jetify-com/devbox) (~12.4k★, Apache-2.0)
 
 ### Internal
-- ADR: [`docs/adr/0001-deno-desktop-shell-bun-sidecar.md`](../../../../docs/adr/0001-deno-desktop-shell-bun-sidecar.md)
-- Spike: [`.scratch/prototype-clone-run-deno-bun/README.md`](../../prototype-clone-run-deno-bun/README.md)
+- ADR: [`docs/adr/0001-deno-desktop-shell-bun-sidecar.md`](../docs/adr/0001-deno-desktop-shell-bun-sidecar.md)

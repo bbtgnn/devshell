@@ -10,15 +10,15 @@ _Avoid_: CMS shell, authoring shell, Electrobun app
 
 **Project**:
 A GitHub repository (optional subdirectory) or local path that Devshell opens, syncs, and runs.
-_Avoid_: Site, site files, workspace (unless meaning the Deno monorepo itself)
+_Avoid_: Site, site files, workspace (unless meaning this Deno workspace)
 
 **Work root**:
 The directory where install and `dev` run — the clone root, or a materialized copy of a monorepo subdirectory.
-_Avoid_: WIP, clone dir (those are different)
+_Avoid_: treating the clone cache path as the run directory when a subdirectory was requested
 
 **Data root**:
 Durable on-disk home for clone cache, registry, and materialized work dirs (OS application support / XDG).
-_Avoid_: WIP-PROTOTYPE, repo-local cache
+_Avoid_: repo-local clone caches
 
 **Bun engine**:
 The resolved Bun CLI executable used for install and run (`embedded` or `path-which`).
@@ -32,7 +32,7 @@ _Avoid_: embedded browser chrome, system browser tab (unless deliberately opened
 The Devshell window for open/sync/run/stop, status, and logs.
 
 **Guest app**:
-The Project's running `dev` process (e.g. Astro), which may call Devshell over a loopback API later.
+The Project's running `dev` process, which may call Devshell over a loopback API later.
 _Avoid_: CMS package, `@cms/*`
 
 **Client package**:
@@ -40,5 +40,5 @@ Optional `@devshell/client` — types and thin fetch helpers for the Guest app; 
 _Avoid_: isomorphic-git wrapper, Deno Desktop bindings
 
 **Flavor**:
-Build-time branding and defaults (app name, icon, locked Project URL). Paused for now.
+Build-time branding and defaults (app name, icon, locked Project URL). Not shipping yet.
 _Avoid_: fork of the runner

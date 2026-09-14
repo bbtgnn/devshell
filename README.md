@@ -18,7 +18,7 @@ docs/adr/
 research/
 ```
 
-Flavors (branded single-repo builds) are paused.
+Flavors (branded single-repo builds) are not shipping yet.
 
 ## Run
 
