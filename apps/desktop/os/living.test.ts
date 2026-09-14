@@ -1,6 +1,6 @@
 import { assert } from "@std/assert";
 import { dirname, fromFileUrl, join } from "@std/path";
-import { spawnLiving } from "../os/living.ts";
+import { spawnLiving } from "./living.ts";
 
 const here = dirname(fromFileUrl(import.meta.url));
 const holdScript = join(here, "hold-port.ts");

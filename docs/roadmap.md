@@ -32,7 +32,7 @@ Decide or schedule later — not blocking R2–R4.
 | **Auto-update (`Deno.autoUpdate`)** | Not needed for now. Windows apply/swap is limited in Deno Desktop anyway |
 | **webview vs CEF** | Keep `webview` until Linux WebKitGTK friction forces CEF (larger binary, consistent Chromium) |
 | **Richer installers** | `.dmg` / `.msi` / `.deb` / `.rpm` after simple app artifacts work |
-| **Win / Linux CI smokes** | Run `smoke:resolve` + `smoke:pipeline` on those OSes before leaning on packaged releases |
+| **Win / Linux CI smokes** | Run `deno task test` + `smoke:pipeline` on those OSes before leaning on packaged releases |
 | **isomorphic-git + Windows symlinks** | Handle if real Projects hit `EPERM`; depth-1 clone + materialize may be enough |
 | **System tray** | Not used yet; Linux tray is DE-dependent when added |
 | **Mobile (iOS / Android)** | Out of scope — see [CONTEXT.md](../CONTEXT.md) |

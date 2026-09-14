@@ -11,7 +11,7 @@ import {
 	listCachedRepos,
 	parseGithubInput,
 	syncProject,
-} from "../project-sync.ts";
+} from "./project-sync.ts";
 
 async function seedLocalClone(
 	dataRoot: string,
@@ -35,7 +35,7 @@ async function seedLocalClone(
 		fs,
 		dir: cloneDir,
 		message: "seed",
-		author: { name: "devshell-smoke", email: "smoke@devshell.local" },
+		author: { name: "devshell-test", email: "test@devshell.local" },
 	});
 	return cloneDir;
 }

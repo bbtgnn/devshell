@@ -1,4 +1,4 @@
-/** Long-lived child used by process-tree.test — holds a TCP port until killed. */
+/** Long-lived child used by living.test — holds a TCP port until killed. */
 const port = Number(Deno.args[0]);
 if (!Number.isFinite(port) || port <= 0) {
 	console.error("usage: hold-port.ts <port>");

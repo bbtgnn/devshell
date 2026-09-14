@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
-import { resolveDataRoot } from "../os/mod.ts";
-import { createProjectSession } from "../project-session.ts";
+import { resolveDataRoot } from "./os/mod.ts";
+import { createProjectSession } from "./project-session.ts";
 
 Deno.test("project session start / stop / fail", async () => {
 	const DATA = resolveDataRoot();

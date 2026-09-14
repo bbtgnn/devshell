@@ -5,12 +5,14 @@ import {
 	bunReleaseUrl,
 	cachedBunEnginePath,
 	ensureBunEngine,
-} from "../bun-engine.ts";
+	resolveBunEngine,
+} from "./bun-engine.ts";
 import {
 	cliBinaryName,
 	ensureExecutableMode,
 	isExecutableFile,
-} from "../os/mod.ts";
+	resolveDataRoot,
+} from "./os/mod.ts";
 
 Deno.test("bunReleaseUrl pins version zip", () => {
 	const expectedUrl = bunReleaseUrl(BUN_ENGINE_VERSION);
@@ -77,4 +79,27 @@ Deno.test("ensureBunEngine offline fail + cache hit", async () => {
 		if (prevBunInstall != null) Deno.env.set("BUN_INSTALL", prevBunInstall);
 		if (prevDevshellBun != null) Deno.env.set("DEVSHELL_BUN_PATH", prevDevshellBun);
 	}
+});
+
+Deno.test("resolveBunEngine skips directory named bun", async () => {
+	const DATA = resolveDataRoot();
+	const trapDir = join(DATA, "trap-bun-dir", "bun");
+	await Deno.mkdir(trapDir, { recursive: true });
+	await Deno.writeTextFile(join(trapDir, "index.js"), "console.log('not a cli')\n");
+
+	const engine = resolveBunEngine(DATA);
+	assert(isExecutableFile(engine.path));
+	assert(
+		engine.path !== trapDir &&
+			!engine.path.endsWith("/trap-bun-dir/bun") &&
+			!engine.path.endsWith("\\trap-bun-dir\\bun"),
+		`picked directory named bun: ${engine.path}`,
+	);
+
+	const ver = new Deno.Command(engine.path, {
+		args: ["--version"],
+		stdout: "piped",
+		stderr: "piped",
+	}).outputSync();
+	assert(ver.success || ver.stdout.length > 0 || ver.stderr.length > 0);
 });

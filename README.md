@@ -12,8 +12,8 @@ Stack (see [ADR 0001](docs/adr/0001-deno-desktop-shell-bun-sidecar.md)): **Deno 
 ## Layout
 
 ```
-apps/desktop/          # Deno Desktop control + preview
-apps/desktop/smoke/    # headless smokes (*.test.ts + network scripts)
+apps/desktop/          # Deno Desktop control + preview (*.test.ts co-located)
+apps/desktop/smoke/    # network / full-pipeline smokes
 packages/client/       # @devshell/client stub (later)
 docs/adr/
 research/
@@ -37,9 +37,9 @@ deno task desktop
 
 Default demo target: [Astro’s blog example](https://github.com/withastro/astro/tree/main/examples/blog) (any GitHub JS Project with a `dev` script works).
 
-### Headless smokes
+### Tests and smokes
 
-Fast checks live under `apps/desktop/smoke/*.test.ts` (`deno task test`). Network / full-pipeline scripts stay as tasks:
+Unit tests sit next to their modules (`deno task test`). Network / full-pipeline smokes stay as tasks:
 
 ```bash
 deno task test

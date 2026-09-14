@@ -10,14 +10,9 @@
 	},
 	"tasks": {
 		"desktop": "deno desktop --hmr --backend webview -A --no-check --include npm:isomorphic-git --include npm:fflate main.ts",
-		"test": "deno test -A smoke/",
-		"smoke:resolve": "deno test -A smoke/resolve.test.ts",
-		"smoke:bun-engine": "deno test -A smoke/bun-engine.test.ts",
-		"smoke:session": "deno test -A smoke/session.test.ts",
-		"smoke:process-tree": "deno test -A smoke/process-tree.test.ts",
-		"smoke:sync": "deno test -A smoke/project-sync.test.ts",
+		"test": "deno test -A --ignore=smoke/",
 		"smoke:bun-download": "deno run -A smoke/bun-download.ts",
-		"smoke:pipeline": "deno test -A smoke/pipeline.test.ts"
+		"smoke:pipeline": "deno run -A smoke/pipeline.ts"
 	},
 	"imports": {
 		"@std/assert": "jsr:@std/assert@1.0.15",
