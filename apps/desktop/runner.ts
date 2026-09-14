@@ -1,12 +1,6 @@
-import fs, {
-	cpSync,
-	existsSync,
-	mkdirSync,
-	rmSync,
-	readFileSync,
-	writeFileSync,
-} from "node:fs";
-import { dirname, join } from "node:path";
+import fs from "node:fs";
+import { copySync, existsSync } from "@std/fs";
+import { dirname, join } from "@std/path";
 import git from "isomorphic-git";
 import http from "isomorphic-git/http/node";
 import type {
@@ -14,6 +8,14 @@ import type {
 	CachedRepo,
 	PackageManager,
 } from "./machine.ts";
+
+function removeIfExists(path: string): void {
+	try {
+		Deno.removeSync(path, { recursive: true });
+	} catch (err) {
+		if (!(err instanceof Deno.errors.NotFound)) throw err;
+	}
+}
 
 export type ParsedGithub = {
 	owner: string;
@@ -196,7 +198,7 @@ export function loadRegistry(dataRoot: string): CloneRegistry {
 	const path = registryPath(dataRoot);
 	if (!existsSync(path)) return { repos: [] };
 	try {
-		const raw = JSON.parse(readFileSync(path, "utf8")) as CloneRegistry;
+		const raw = JSON.parse(Deno.readTextFileSync(path)) as CloneRegistry;
 		return { repos: Array.isArray(raw.repos) ? raw.repos : [] };
 	} catch {
 		return { repos: [] };
@@ -204,8 +206,11 @@ export function loadRegistry(dataRoot: string): CloneRegistry {
 }
 
 export function saveRegistry(dataRoot: string, registry: CloneRegistry): void {
-	mkdirSync(dataRoot, { recursive: true });
-	writeFileSync(registryPath(dataRoot), `${JSON.stringify(registry, null, 2)}\n`);
+	Deno.mkdirSync(dataRoot, { recursive: true });
+	Deno.writeTextFileSync(
+		registryPath(dataRoot),
+		`${JSON.stringify(registry, null, 2)}\n`,
+	);
 }
 
 export function listCachedRepos(dataRoot: string): CachedRepo[] {
@@ -249,7 +254,7 @@ export async function ensureRepo(
 	const id = repoSlug(parsed);
 	const cloneDir = join(dataRoot, "clones", id);
 	const gitDir = join(cloneDir, ".git");
-	mkdirSync(join(dataRoot, "clones"), { recursive: true });
+	Deno.mkdirSync(join(dataRoot, "clones"), { recursive: true });
 
 	let action: "cloned" | "pulled";
 
@@ -286,7 +291,7 @@ export async function ensureRepo(
 		} else {
 			action = "cloned";
 			onLine(`fresh clone ${parsed.cloneUrl} @ ${parsed.branch} → ${cloneDir}`);
-			rmSync(cloneDir, { recursive: true, force: true });
+			removeIfExists(cloneDir);
 			await git.clone({
 				fs,
 				http,
@@ -311,7 +316,7 @@ export async function ensureRepo(
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
 		if (!existsSync(gitDir)) {
-			rmSync(cloneDir, { recursive: true, force: true });
+			removeIfExists(cloneDir);
 		}
 		upsertRegistryEntry(dataRoot, {
 			id,
@@ -344,9 +349,9 @@ export function materializeWorkDir(
 	const subSlug = sub.replace(/[/\\]+/g, "__");
 	const workDir = join(dataRoot, "work", `${cloneId}__${subSlug}`);
 	onLine(`materialize ${sub} → ${workDir}`);
-	rmSync(workDir, { recursive: true, force: true });
-	mkdirSync(dirname(workDir), { recursive: true });
-	cpSync(src, workDir, { recursive: true });
+	removeIfExists(workDir);
+	Deno.mkdirSync(dirname(workDir), { recursive: true });
+	copySync(src, workDir);
 	return workDir;
 }
 
