@@ -7,7 +7,6 @@ import {
 	type SessionState,
 } from "./machine.ts";
 import { resolveDataRoot } from "./paths.ts";
-import { writeClipboard } from "./clipboard.ts";
 import {
 	bunDevCommand,
 	bunInstallCommand,
@@ -460,18 +459,14 @@ document.getElementById("btn-reopen").onclick = () => bindings.reopenPreview();
 document.getElementById("btn-copy-logs").onclick = async () => {
   const status = document.getElementById("copy-status");
   try {
-    const result = await bindings.copyLogs();
-    status.textContent = "Copied " + result.lines + " lines";
+    const lines = (state && state.logTail) ? state.logTail : [];
+    const text = lines.length
+      ? lines.join("\\n")
+      : (document.getElementById("log").textContent || "");
+    await navigator.clipboard.writeText(text === "(empty)" ? "" : text);
+    status.textContent = "Copied " + lines.length + " lines";
   } catch (err) {
-    try {
-      const text = (state && state.logTail && state.logTail.length)
-        ? state.logTail.join("\\n")
-        : (document.getElementById("log").textContent || "");
-      await navigator.clipboard.writeText(text === "(empty)" ? "" : text);
-      status.textContent = "Copied via clipboard API";
-    } catch (err2) {
-      status.textContent = "Copy failed: " + (err && err.message ? err.message : String(err));
-    }
+    status.textContent = "Copy failed: " + (err && err.message ? err.message : String(err));
   }
   setTimeout(() => { status.textContent = ""; }, 2000);
 };
@@ -504,11 +499,6 @@ function bindWindow(win: DesktopWindow) {
 	win.bind("reopenPreview", () => {
 		if (state.previewUrl) openPreview(state.previewUrl);
 		return snapshot(state);
-	});
-	win.bind("copyLogs", async () => {
-		const text = state.logTail.join("\n");
-		await writeClipboard(text);
-		return { ok: true, lines: state.logTail.length, bytes: text.length };
 	});
 }
 
