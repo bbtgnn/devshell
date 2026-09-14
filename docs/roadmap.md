@@ -6,7 +6,7 @@ Ordered product phases for Devshell. Platform facts live in [research/02-platfor
 
 | Item | Notes |
 | --- | --- |
-| **Process-tree kill** | On stop, tear down Bun/`dev` descendants so ports are not left held — especially Windows (`TerminateProcess` alone is not enough). |
+| **Process-tree kill** | **Done (Unix verified):** `os/process-host-posix` (`detached` + group `SIGTERM`→`SIGKILL`). **Windows v1:** `taskkill /T /F` in `os/process-host-windows` (smoke when Win CI exists). Job Object FFI only if orphans remain. |
 
 ## Phases
 

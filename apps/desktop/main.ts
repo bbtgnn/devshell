@@ -6,7 +6,11 @@ import {
 	type Action,
 	type SessionState,
 } from "./machine.ts";
-import { resolveDataRoot } from "./os/mod.ts";
+import {
+	resolveDataRoot,
+	spawnLiving,
+	type LivingProcess,
+} from "./os/mod.ts";
 import {
 	bunDevCommand,
 	bunInstallCommand,
@@ -16,8 +20,6 @@ import {
 	materializeWorkDir,
 	parseGithubInput,
 	runCaptured,
-	spawnLiving,
-	type LivingProcess,
 } from "./runner.ts";
 import { ensureBunEngine } from "./bun-engine.ts";
 
@@ -70,14 +72,15 @@ function snapshot(s: SessionState) {
 	};
 }
 
-function stopLiving() {
-	living?.kill();
+async function stopLiving() {
+	const current = living;
 	living = null;
+	if (current) await current.stop();
 }
 
 async function runPipeline(repoUrl: string, subdirectory = "") {
 	const token = ++runToken;
-	stopLiving();
+	await stopLiving();
 	dispatch({ type: "start", repoUrl, subdirectory });
 
 	try {
@@ -165,8 +168,9 @@ async function runPipeline(repoUrl: string, subdirectory = "") {
 			},
 		});
 
-		void living.wait.then((status) => {
+		void living.exited.then((status) => {
 			if (token !== runToken) return;
+			if (status.stopped) return;
 			if (state.phase === "previewing" || state.phase === "waiting_for_url") {
 				dispatch({
 					type: "fail",
@@ -176,7 +180,7 @@ async function runPipeline(repoUrl: string, subdirectory = "") {
 		});
 	} catch (err) {
 		if (token !== runToken) return;
-		stopLiving();
+		await stopLiving();
 		dispatch({
 			type: "fail",
 			error: err instanceof Error ? err.message : String(err),
@@ -488,12 +492,12 @@ function bindWindow(win: DesktopWindow) {
 	});
 	win.bind("stop", () => {
 		runToken++;
-		stopLiving();
+		void stopLiving();
 		return snapshot(dispatch({ type: "stop" }));
 	});
 	win.bind("reset", () => {
 		runToken++;
-		stopLiving();
+		void stopLiving();
 		return snapshot(dispatch({ type: "reset" }));
 	});
 	win.bind("reopenPreview", () => {

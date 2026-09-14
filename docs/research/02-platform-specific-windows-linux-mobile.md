@@ -119,7 +119,7 @@ Sources: [Bun Installation](https://bun.com/docs/installation), [Bun Spawn / chi
 | Linux kernel | Recommends ≥5.6; runs as old as 3.10 with degradation; needs `unzip` for install script | [Installation](https://bun.com/docs/installation) |
 | musl / Alpine | Separate musl binaries; glibc binaries need glibc ≥2.17 | [Installation](https://bun.com/docs/installation) |
 
-**Deno-side kill (what Devshell uses):** `ChildProcess.kill` defaults to `SIGTERM` ([Deno API](https://docs.deno.com/api/deno/~/Deno.ChildProcess.prototype.kill)). On Windows, signals sent via `Deno.kill` **ultimately invoke `TerminateProcess`** ([OS signals tutorial](https://docs.deno.com/examples/os_signals_tutorial/)) — not Unix-style catchable SIGTERM for the child.
+**Deno-side kill (what Devshell uses):** Guest trees go through `ProcessHost` (`os/process-host-*`). Unix: process-group kill. Windows v1: `taskkill /T /F` (not raw `ChildProcess.kill` / `TerminateProcess` alone). Job Object FFI is a follow-up if `taskkill` orphans remain.
 
 ---
 
@@ -148,7 +148,7 @@ Code under `apps/desktop/`. Status as of **2026-09-14** portability pass.
 | `pathListSeparator` + `commandPathNames` | `runner.ts` `whichOnPath` | Windows uses `;` and `bun.exe` / `node.exe` | **Addressed** |
 | `BUN_INSTALL` / embedded candidates include **`bun.exe`** | `runner.ts` | Matches Windows Bun layout | **Addressed** |
 | macOS bundle paths `../Resources/bin/bun`, `../MacOS/bun` | `runner.ts` | Matches Deno Desktop `.app` layout. Harmless no-ops on Win/Linux dir layouts | Packaging-aware (macOS); incomplete for Windows dir / Linux AppImage |
-| `proc.kill()` on Windows, `SIGTERM` elsewhere | `runner.ts` `spawnLiving` | Windows still maps to TerminateProcess — abrupt, may orphan grandchildren | **Partial** |
+| Process-tree kill via `ProcessHost` | `os/living.ts` + `os/process-host-{posix,windows}.ts` | Unix: process group (`detached` + `Deno.kill(-pid)`). Windows v1: `taskkill /T /F`. Job Object FFI if orphans appear | **Addressed** (Unix smoke); Windows unverified in CI |
 | `isExecutableFile` skips Unix mode bits on Windows | `runner.ts` | Avoids false negatives on `bun.exe` | **Addressed** |
 | Data root `darwin` / `windows` / `linux` | `paths.ts` | Correct against OS specs | OK |
 | Backend `webview` | `deno.json` | Linux WebKitGTK host dep; Windows WebView2 Runtime **not documented** by Deno | Open packaging choice |
@@ -172,7 +172,7 @@ Also honors `DEVSHELL_DATA_DIR` override and `HOME` / `USERPROFILE` — sensible
 
 | Priority | Gap | Why |
 | --- | --- | --- |
-| P1 | Process tree kill | `kill()` is still TerminateProcess; grandchildren / held ports possible |
+| P1 | Process tree kill — Job Object if needed | v1 is `taskkill /T /F` via `windowsProcessHost`; verify under Win smoke/CI; Job Object FFI only if orphans remain |
 | P1 | Packaged embed paths for Windows dir / MSI layout | Still primarily macOS `.app` Resources/MacOS candidates |
 | P2 | Symlink-heavy git clones via isomorphic-git | Windows `EPERM` on symlink creation without privilege |
 | P2 | Auto-update if product relies on `Deno.autoUpdate()` | Explicitly unsupported apply/swap on Windows |

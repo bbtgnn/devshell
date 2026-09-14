@@ -379,48 +379,4 @@ export async function runCaptured(
 	};
 }
 
-export type LivingProcess = {
-	kill: () => void;
-	wait: Promise<Deno.CommandStatus>;
-};
-
-export function spawnLiving(
-	cmd: string[],
-	opts: {
-		cwd: string;
-		onChunk: (text: string) => void;
-	},
-): LivingProcess {
-	const proc = new Deno.Command(cmd[0], {
-		args: cmd.slice(1),
-		cwd: opts.cwd,
-		stdout: "piped",
-		stderr: "piped",
-	}).spawn();
-
-	const pump = async (stream: ReadableStream<Uint8Array>) => {
-		const reader = stream.getReader();
-		const dec = new TextDecoder();
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
-			opts.onChunk(dec.decode(value, { stream: true }));
-		}
-	};
-
-	void pump(proc.stdout);
-	void pump(proc.stderr);
-
-	return {
-		kill: () => {
-			try {
-				// Windows: TerminateProcess via Deno.kill (no Unix SIGTERM semantics).
-				if (Deno.build.os === "windows") proc.kill();
-				else proc.kill("SIGTERM");
-			} catch {
-				// already dead
-			}
-		},
-		wait: proc.status,
-	};
-}
+export { spawnLiving, type LivingExit, type LivingProcess } from "./os/mod.ts";
