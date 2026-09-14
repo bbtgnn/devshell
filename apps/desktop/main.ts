@@ -6,7 +6,7 @@ import {
 	type Action,
 	type SessionState,
 } from "./machine.ts";
-import { resolveDataRoot } from "./paths.ts";
+import { resolveDataRoot } from "./os/mod.ts";
 import {
 	bunDevCommand,
 	bunInstallCommand,

@@ -1,11 +1,11 @@
 import { join } from "@std/path";
-import { resolveDataRoot } from "./paths.ts";
 import {
 	commandPathNames,
 	isExecutableFile,
 	pathListSeparator,
-	resolveBunEngine,
-} from "./runner.ts";
+	resolveDataRoot,
+} from "./os/mod.ts";
+import { resolveBunEngine } from "./runner.ts";
 
 const DATA = resolveDataRoot();
 

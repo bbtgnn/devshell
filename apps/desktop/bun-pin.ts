@@ -1,4 +1,5 @@
 import { join } from "@std/path";
+import { cliBinaryName } from "./os/mod.ts";
 
 /** Pinned Bun CLI version downloaded into the Data root when no local engine exists. */
 export const BUN_ENGINE_VERSION = "1.3.12";
@@ -33,6 +34,5 @@ export function cachedBunEnginePath(
 	dataRoot: string,
 	version: string = BUN_ENGINE_VERSION,
 ): string {
-	const name = Deno.build.os === "windows" ? "bun.exe" : "bun";
-	return join(dataRoot, "engine", `bun-${version}`, name);
+	return join(dataRoot, "engine", `bun-${version}`, cliBinaryName("bun"));
 }
