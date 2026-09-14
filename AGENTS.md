@@ -21,4 +21,4 @@ An ADR records the design decision and why the alternatives lost. Paths, module 
 - **Domain** (naming Project, Work root, Data root, Bun engine, Guest app, Client package, Flavor, …): read [CONTEXT.md](CONTEXT.md). Resolve or change a term → update it there.
 - **Architecture** (Deno Desktop shell, Bun sidecar, isomorphic-git sync, preview windows, rejecting Electrobun/browser chrome): read [docs/adr/](docs/adr/), start with [0001](docs/adr/0001-deno-desktop-shell-bun-sidecar.md). Hard-to-reverse trade-off → add a durable ADR.
 - **Run / smoke / data-dir overrides**: [README.md](README.md); tasks and desktop config live in the repo’s `deno.json` files.
-- **Handoff** (spike port, CMS monorepo boundary, what not to absorb): [HANDOFF.md](HANDOFF.md).
+- **Prior art** (positioning vs LocalWP / launchers / cloud IDEs): [research/](research/).

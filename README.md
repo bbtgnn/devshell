@@ -49,4 +49,4 @@ Embedded Bun override: `DEVSHELL_BUN_PATH=/path/to/bun`.
 
 ## Domain language
 
-See [CONTEXT.md](CONTEXT.md). Initialization brief from the CMS monorepo spike: [HANDOFF.md](HANDOFF.md).
+See [CONTEXT.md](CONTEXT.md).
