@@ -1,12 +1,10 @@
-import { resolveAppRoot, resolveDataRoot } from "./paths.ts";
+import { resolveDataRoot } from "./paths.ts";
+import { ensureBunEngine } from "./bun-engine.ts";
 import {
 	bunInstallCommand,
-	detectPackageManager,
 	ensureRepo,
-	formatBunEngine,
 	materializeWorkDir,
 	parseGithubInput,
-	resolveBunEngine,
 	runCaptured,
 } from "./runner.ts";
 
@@ -15,8 +13,10 @@ const DEFAULT =
 	"https://github.com/withastro/astro/tree/main/examples/blog";
 
 console.log("data root:", DATA);
-const engine = resolveBunEngine(resolveAppRoot());
-console.log("bunEngine", formatBunEngine(engine));
+const engine = await ensureBunEngine(DATA, {
+	onProgress: (line) => console.log("  ", line),
+});
+console.log("bunEngine", engine.path);
 
 const parsed = parseGithubInput(DEFAULT);
 console.log("sync", parsed);
@@ -29,9 +29,7 @@ const dir = materializeWorkDir(
 	DATA,
 	(line) => console.log("  ", line),
 );
-const pm = detectPackageManager(dir);
 console.log("workDir:", dir);
-console.log("lockfile PM (info):", pm);
 
 const install = await runCaptured(bunInstallCommand(engine), {
 	cwd: dir,
@@ -43,8 +41,7 @@ if (!install.success) {
 }
 
 console.log("SMOKE PIPELINE OK", {
-	source: engine.source,
-	systemNodePresent: engine.systemNodePresent,
+	bunPath: engine.path,
 	gitAction: ensured.action,
 	workDir: dir,
 });

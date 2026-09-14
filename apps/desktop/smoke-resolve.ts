@@ -1,14 +1,12 @@
 import { join } from "node:path";
-import { resolveAppRoot, resolveDataRoot } from "./paths.ts";
+import { resolveDataRoot } from "./paths.ts";
 import {
 	commandPathNames,
-	formatBunEngine,
 	isExecutableFile,
 	pathListSeparator,
 	resolveBunEngine,
 } from "./runner.ts";
 
-const HERE = resolveAppRoot();
 const DATA = resolveDataRoot();
 
 const sep = pathListSeparator();
@@ -31,13 +29,12 @@ if (Deno.build.os === "windows") {
 }
 console.log("commandPathNames(bun):", bunNames.join(", "));
 
-// Trap: a directory named `bun` must never win resolveBunEngine.
 const trapDir = join(DATA, "trap-bun-dir", "bun");
 await Deno.mkdir(trapDir, { recursive: true });
 await Deno.writeTextFile(join(trapDir, "index.js"), "console.log('not a cli')\n");
 
-const engine = resolveBunEngine(HERE);
-console.log("resolveBunEngine:", formatBunEngine(engine));
+const engine = resolveBunEngine(DATA);
+console.log("resolveBunEngine:", engine.path);
 console.log("data root:", DATA);
 
 if (!isExecutableFile(engine.path)) {
@@ -62,7 +59,4 @@ console.log(
 	"bun --version:",
 	new TextDecoder().decode(ver.stdout || ver.stderr).trim(),
 );
-console.log(
-	"OK",
-	engine.source === "embedded" ? "(embedded binary)" : "(PATH bun)",
-);
+console.log("OK");

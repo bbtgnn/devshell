@@ -1,7 +1,6 @@
 export type Phase =
 	| "idle"
 	| "cloning"
-	| "detecting"
 	| "installing"
 	| "starting"
 	| "waiting_for_url"
@@ -9,15 +8,8 @@ export type Phase =
 	| "failed"
 	| "stopped";
 
-// Lockfile PM is informational — install/run always use Bun.
-export type PackageManager = "bun" | "pnpm" | "yarn" | "npm" | "deno";
-
-export type BunEngineSource = "embedded" | "path-which";
-
 export type BunEngineInfo = {
 	path: string;
-	source: BunEngineSource;
-	systemNodePresent: boolean;
 };
 
 export type CachedRepo = {
@@ -34,7 +26,6 @@ export type SessionState = {
 	repoUrl: string;
 	subdirectory: string;
 	workDir: string;
-	packageManager: PackageManager | null;
 	bunEngine: BunEngineInfo | null;
 	devCommand: string | null;
 	previewUrl: string | null;
@@ -49,8 +40,7 @@ export type Action =
 	| { type: "start"; repoUrl: string; subdirectory?: string }
 	| { type: "phase"; phase: Phase }
 	| {
-			type: "detected";
-			packageManager: PackageManager;
+			type: "ready";
 			workDir: string;
 			devCommand: string;
 			bunEngine: BunEngineInfo;
@@ -69,7 +59,6 @@ export function initialState(): SessionState {
 		repoUrl: "",
 		subdirectory: "",
 		workDir: "",
-		packageManager: null,
 		bunEngine: null,
 		devCommand: null,
 		previewUrl: null,
@@ -107,24 +96,17 @@ export function reduce(state: SessionState, action: Action): SessionState {
 		case "phase":
 			return touch({ ...state, phase: action.phase, error: null }, ["phase"]);
 
-		case "detected":
+		case "ready":
 			return touch(
 				{
 					...state,
 					phase: "installing",
-					packageManager: action.packageManager,
 					workDir: action.workDir,
 					devCommand: action.devCommand,
 					bunEngine: action.bunEngine,
 					error: null,
 				},
-				[
-					"phase",
-					"packageManager",
-					"workDir",
-					"devCommand",
-					"bunEngine",
-				],
+				["phase", "workDir", "devCommand", "bunEngine"],
 			);
 
 		case "cached_repos":

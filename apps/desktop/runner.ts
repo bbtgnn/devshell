@@ -12,8 +12,8 @@ import http from "isomorphic-git/http/node";
 import type {
 	BunEngineInfo,
 	CachedRepo,
-	PackageManager,
 } from "./machine.ts";
+import { BUN_ENGINE_VERSION, cachedBunEnginePath } from "./bun-pin.ts";
 
 export type ParsedGithub = {
 	owner: string;
@@ -65,10 +65,6 @@ function whichOnPath(cmd: string): string | null {
 	return null;
 }
 
-function systemNodePresent(): boolean {
-	return Boolean(whichOnPath("node") || whichOnPath("npm"));
-}
-
 function firstExistingExecutable(candidates: string[]): string | null {
 	for (const candidate of candidates) {
 		if (isExecutableFile(candidate)) return candidate;
@@ -77,9 +73,7 @@ function firstExistingExecutable(candidates: string[]): string | null {
 }
 
 // Never treat a JS bundle directory named `bun` as the CLI (EACCES posix_spawn).
-export function resolveBunEngine(appRoot: string): BunEngine {
-	const nodePresent = systemNodePresent();
-
+export function resolveBunEngine(dataRoot?: string): BunEngine {
 	const envPath = Deno.env.get("DEVSHELL_BUN_PATH")?.trim();
 	if (envPath) {
 		if (!isExecutableFile(envPath)) {
@@ -87,41 +81,14 @@ export function resolveBunEngine(appRoot: string): BunEngine {
 				`DEVSHELL_BUN_PATH is not an executable file: ${envPath}`,
 			);
 		}
-		return { path: envPath, source: "embedded", systemNodePresent: nodePresent };
+		return { path: envPath };
 	}
 
-	const embeddedCandidates = [
-		join(appRoot, "bin", "bun"),
-		join(appRoot, "bin", "bun.exe"),
-		join(appRoot, "vendor", "bun"),
-		join(appRoot, "vendor", "bun.exe"),
-		join(appRoot, "vendor", "bin", "bun"),
-		join(appRoot, "vendor", "bin", "bun.exe"),
-	];
-
-	try {
-		const execPath = Deno.execPath();
-		const execDir = dirname(execPath);
-		embeddedCandidates.push(
-			join(execDir, "bun"),
-			join(execDir, "bun.exe"),
-			join(execDir, "bin", "bun"),
-			join(execDir, "bin", "bun.exe"),
-			join(execDir, "..", "Resources", "bin", "bun"),
-			join(execDir, "..", "Resources", "bin", "bun.exe"),
-			join(execDir, "..", "MacOS", "bun"),
-		);
-	} catch {
-		// Deno.execPath unavailable
-	}
-
-	const embedded = firstExistingExecutable(embeddedCandidates);
-	if (embedded) {
-		return {
-			path: embedded,
-			source: "embedded",
-			systemNodePresent: nodePresent,
-		};
+	if (dataRoot) {
+		const cached = cachedBunEnginePath(dataRoot, BUN_ENGINE_VERSION);
+		if (isExecutableFile(cached)) {
+			return { path: cached };
+		}
 	}
 
 	const bunInstall = Deno.env.get("BUN_INSTALL")?.trim();
@@ -130,26 +97,14 @@ export function resolveBunEngine(appRoot: string): BunEngine {
 			join(bunInstall, "bin", "bun"),
 			join(bunInstall, "bin", "bun.exe"),
 		]);
-		if (fromInstall) {
-			return {
-				path: fromInstall,
-				source: "path-which",
-				systemNodePresent: nodePresent,
-			};
-		}
+		if (fromInstall) return { path: fromInstall };
 	}
 
 	const which = whichOnPath("bun");
-	if (which) {
-		return {
-			path: which,
-			source: "path-which",
-			systemNodePresent: nodePresent,
-		};
-	}
+	if (which) return { path: which };
 
 	throw new Error(
-		"No Bun CLI found. Set DEVSHELL_BUN_PATH, run scripts/vendor-bun.sh (or vendor-bun.ps1), or put bun on PATH.",
+		"No Bun CLI found. Put bun on PATH, set DEVSHELL_BUN_PATH, or let Devshell download the pinned engine on start.",
 	);
 }
 
@@ -169,10 +124,6 @@ export function bunDevCommand(engine: BunEngine, dir: string): string[] {
 		throw new Error(`No "dev" script found in ${dir}`);
 	}
 	return [engine.path, "run", "dev"];
-}
-
-export function formatBunEngine(engine: BunEngine): string {
-	return `${engine.source} → ${engine.path} (systemNode=${engine.systemNodePresent})`;
 }
 
 export function parseGithubInput(input: string, subdirectory = ""): ParsedGithub {
@@ -378,20 +329,6 @@ export function materializeWorkDir(
 	mkdirSync(dirname(workDir), { recursive: true });
 	cpSync(src, workDir, { recursive: true });
 	return workDir;
-}
-
-export function detectPackageManager(dir: string): PackageManager {
-	if (existsSync(join(dir, "bun.lockb")) || existsSync(join(dir, "bun.lock"))) {
-		return "bun";
-	}
-	if (existsSync(join(dir, "pnpm-lock.yaml"))) return "pnpm";
-	if (existsSync(join(dir, "yarn.lock"))) return "yarn";
-	if (existsSync(join(dir, "package-lock.json"))) return "npm";
-	if (existsSync(join(dir, "deno.json")) || existsSync(join(dir, "deno.jsonc"))) {
-		return "deno";
-	}
-	if (existsSync(join(dir, "package.json"))) return "npm";
-	throw new Error(`No package manager clues in ${dir}`);
 }
 
 export function extractLocalUrl(chunk: string): string | null {

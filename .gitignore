@@ -3,10 +3,6 @@ node_modules/
 **/node_modules/
 deno.lock
 
-# Vendored Bun binary (optional; regenerate via scripts/vendor-bun.sh)
-apps/desktop/bin/
-apps/desktop/vendor/
-
 # Local overrides
 .env
 .env.*

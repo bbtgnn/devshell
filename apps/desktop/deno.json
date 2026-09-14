@@ -9,13 +9,16 @@
 		}
 	},
 	"tasks": {
-		"desktop": "deno desktop --hmr --backend webview -A --no-check --include npm:isomorphic-git main.ts",
+		"desktop": "deno desktop --hmr --backend webview -A --no-check --include npm:isomorphic-git --include npm:fflate main.ts",
 		"smoke:resolve": "deno run -A smoke-resolve.ts",
+		"smoke:bun-engine": "deno run -A smoke-bun-engine.ts",
+		"smoke:bun-download": "deno run -A smoke-bun-download.ts",
 		"smoke:pipeline": "deno run -A smoke-pipeline.ts"
 	},
 	"imports": {
 		"isomorphic-git": "npm:isomorphic-git@1.42.2",
-		"isomorphic-git/http/node": "npm:isomorphic-git@1.42.2/http/node"
+		"isomorphic-git/http/node": "npm:isomorphic-git@1.42.2/http/node",
+		"fflate": "npm:fflate@0.8.2"
 	},
 	"compilerOptions": {
 		"lib": ["deno.window", "deno.ns"],

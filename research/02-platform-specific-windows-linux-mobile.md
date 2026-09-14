@@ -9,7 +9,7 @@
 1. **Product scope (2026-09-14): desktop only.** iOS/Android are out of scope — see [CONTEXT.md](../CONTEXT.md). Research below still notes Deno’s “Not yet” for mobile so the constraint is documented; it is not a Devshell roadmap item.
 2. **Deno Desktop officially targets macOS / Windows / Linux.** Official comparison table lists **iOS / Android: Not yet**.
 3. **Packaging matrix is real for all three desktops** (`.app`/`.dmg`, Windows dir/`.msi`, Linux dir/AppImage/deb/rpm) with cross-compile via `--target` / `--all-targets`. One host exception: **`.dmg` requires a macOS host** (`hdiutil`).
-4. **Devshell desktop portability (code):** PATH list separator and `bun.exe` lookup, OS clipboard helper (`clipboard.ts`), Windows process kill without SIGTERM, and `vendor-bun.ps1` were added 2026-09-14. Remaining packaging gaps (embed layout, WebKitGTK vs CEF, Windows auto-update) are still open — see §7.
+4. **Devshell desktop portability (code):** PATH list separator and `bun.exe` lookup, OS clipboard helper (`clipboard.ts`), and Windows process kill without SIGTERM were added 2026-09-14. Bun is resolved via PATH / env / pinned Data-root download (no vendor scripts). Remaining packaging gaps (WebKitGTK vs CEF, Windows auto-update) are still open — see §7.
 5. **Auto-update does not apply on Windows** (patches download/stage; launcher does not swap). Deno has **no native clipboard API** yet — Devshell uses OS clipboard CLIs plus webview `navigator.clipboard` fallback in the control UI.
 
 ---
@@ -151,7 +151,6 @@ Code under `apps/desktop/`. Status as of **2026-09-14** portability pass.
 | `proc.kill()` on Windows, `SIGTERM` elsewhere | `runner.ts` `spawnLiving` | Windows still maps to TerminateProcess — abrupt, may orphan grandchildren | **Partial** |
 | `isExecutableFile` skips Unix mode bits on Windows | `runner.ts` | Avoids false negatives on `bun.exe` | **Addressed** |
 | Data root `darwin` / `windows` / `linux` | `paths.ts` | Correct against OS specs | OK |
-| `vendor-bun.sh` + **`vendor-bun.ps1`** | `scripts/` | Windows vendors to `bin/bun.exe` | **Addressed** |
 | Backend `webview` | `deno.json` | Linux WebKitGTK host dep; Windows WebView2 Runtime **not documented** by Deno | Open packaging choice |
 | isomorphic-git clone into data root | `runner.ts` | Symlink repos / long paths on Windows: see §5 | Conditional |
 
@@ -194,7 +193,7 @@ Also honors `DEVSHELL_DATA_DIR` override and `HOME` / `USERPROFILE` — sensible
 | Per-OS `desktop.output` (`.app`/`.dmg`, dir/`.msi`, AppImage/deb/rpm) | Documented; not configured in Devshell yet |
 | Cross-compile matrix + macOS-only `.dmg` / codesign / notarization | [Distribution](https://docs.deno.com/runtime/desktop/distribution/) |
 | Windows Authenticode signing of launcher + `denort.dll` | External `signtool` |
-| Embed Bun next to Windows/Linux layouts (not only `Resources`/`MacOS`) | Need install layout design per platform artifact |
+| Embed Bun next to Windows/Linux layouts (not only `Resources`/`MacOS`) | Superseded for product default by pinned Data-root download; only relevant if re-embedding later |
 | Linux: document WebKitGTK vs ship `cef` | Packaging/docs choice |
 | Windows auto-update story | Full reinstall / external updater until Deno supports swap |
 

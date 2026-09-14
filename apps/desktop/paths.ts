@@ -1,18 +1,4 @@
-import { dirname, join } from "node:path";
-import { existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-
-// `deno desktop` may run from a read-only temp extract — prefer cwd when it
-// looks like apps/desktop; skip deno-compile-* extract paths.
-export function resolveAppRoot(): string {
-	const cwd = Deno.cwd();
-	if (existsSync(join(cwd, "main.ts")) && existsSync(join(cwd, "runner.ts"))) {
-		return cwd;
-	}
-	const beside = dirname(fileURLToPath(import.meta.url));
-	if (!beside.includes("deno-compile-")) return beside;
-	return cwd;
-}
+import { join } from "node:path";
 
 export function resolveDataRoot(): string {
 	const override = Deno.env.get("DEVSHELL_DATA_DIR")?.trim();

@@ -7,7 +7,7 @@ Devshell needs a desktop shell that syncs a GitHub-backed Project, installs and 
 ## Decision
 
 - **Shell:** Deno Desktop (control + preview windows). Not Electrobun, Electron, or CEF-as-product. The product needs a preview window for pages, not an embedded browser.
-- **Toolchain:** a real Bun CLI executable as sidecar (`embedded` or `path-which`). Never treat a directory named `bun` as the CLI.
+- **Toolchain:** a real Bun CLI executable as sidecar. Never treat a directory named `bun` as the CLI.
 - **Sync:** isomorphic-git into a durable Data root (clone cache + registry); materialize Work roots for monorepo subdirectories. No system git required for sync.
 - **Preview:** a second OS window driven by navigate / reload / show / focus. Approximate split with window geometry; no native split pane. Do not rebuild mini-browser chrome (URL bar, back/forward, same-origin proxy) — tried and rejected once the product need was clear.
 
@@ -19,5 +19,5 @@ Devshell needs a desktop shell that syncs a GitHub-backed Project, installs and 
 
 ## Consequences
 
-- Portability is “Deno-packaged app + vendored Bun (+ isomorphic-git),” not an Electrobun host. Packaging / notarization still open.
+- Portability is “Deno-packaged app + Bun sidecar (+ isomorphic-git),” not an Electrobun host. The product default is a pinned Bun download into the Data root when no local engine exists (`DEVSHELL_BUN_PATH` / PATH still win when set). Packaging / notarization still open.
 - Preview UX is app-driven URL navigation, not synced browsing chrome.

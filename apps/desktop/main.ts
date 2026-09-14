@@ -6,23 +6,21 @@ import {
 	type Action,
 	type SessionState,
 } from "./machine.ts";
-import { resolveAppRoot, resolveDataRoot } from "./paths.ts";
+import { resolveDataRoot } from "./paths.ts";
 import { writeClipboard } from "./clipboard.ts";
 import {
 	bunDevCommand,
 	bunInstallCommand,
-	detectPackageManager,
 	ensureRepo,
 	extractLocalUrl,
-	formatBunEngine,
 	listCachedRepos,
 	materializeWorkDir,
 	parseGithubInput,
-	resolveBunEngine,
 	runCaptured,
 	spawnLiving,
 	type LivingProcess,
 } from "./runner.ts";
+import { ensureBunEngine } from "./bun-engine.ts";
 
 // Deno.BrowserWindow ships with `deno desktop` but isn't in stable lib types yet.
 type DesktopWindow = {
@@ -43,7 +41,6 @@ type DesktopWindowCtor = new (opts?: {
 const BrowserWindow = (Deno as unknown as { BrowserWindow?: DesktopWindowCtor })
 	.BrowserWindow;
 
-const HERE = resolveAppRoot();
 const DATA_ROOT = resolveDataRoot();
 
 const DEFAULT_REPO =
@@ -58,7 +55,6 @@ function dispatch(action: Action): SessionState {
 	state = reduce(state, action);
 	console.log(`[state] ${state.phase}`, {
 		repoUrl: state.repoUrl,
-		packageManager: state.packageManager,
 		bunEngine: state.bunEngine,
 		previewUrl: state.previewUrl,
 		error: state.error,
@@ -86,16 +82,15 @@ async function runPipeline(repoUrl: string, subdirectory = "") {
 	dispatch({ type: "start", repoUrl, subdirectory });
 
 	try {
-		const engine = resolveBunEngine(HERE);
-		dispatch({
-			type: "log",
-			line: `bunEngine ${formatBunEngine(engine)}`,
+		const engine = await ensureBunEngine(DATA_ROOT, {
+			onProgress: (line) => {
+				if (token !== runToken) return;
+				dispatch({ type: "log", line });
+			},
 		});
 		dispatch({
 			type: "log",
-			line: engine.systemNodePresent
-				? "system node/npm present (not required for install/run)"
-				: "system node/npm absent — install uses bun only",
+			line: `bunEngine ${engine.path}`,
 		});
 
 		const parsed = parseGithubInput(repoUrl, subdirectory);
@@ -129,20 +124,13 @@ async function runPipeline(repoUrl: string, subdirectory = "") {
 				dispatch({ type: "log", line });
 			},
 		);
-		dispatch({ type: "phase", phase: "detecting" });
-		const pm = detectPackageManager(dir);
 		const installCmd = bunInstallCommand(engine);
 		const devCmd = bunDevCommand(engine, dir);
 		dispatch({
-			type: "detected",
-			packageManager: pm,
+			type: "ready",
 			workDir: dir,
 			devCommand: devCmd.join(" "),
 			bunEngine: engine,
-		});
-		dispatch({
-			type: "log",
-			line: `lockfile PM=${pm} (informational); install via bun sidecar`,
 		});
 
 		const install = await runCaptured(installCmd, {
@@ -281,7 +269,7 @@ function controlPage(): string {
 <main>
   <div class="badge">Devshell · Deno Desktop + Bun sidecar</div>
   <h1>Sync → bun install → bun run → preview</h1>
-  <p class="q">Clone/pull via isomorphic-git into the app data cache, materialize monorepo subdirs, install and run with the Bun sidecar, open a native preview. Watch <code>bunEngine.source</code> (<em>embedded</em> vs <em>path-which</em>).</p>
+  <p class="q">Clone/pull via isomorphic-git into the app data cache, materialize monorepo subdirs, install and run with the Bun sidecar, open a native preview.</p>
 
   <section>
     <h2>Current state</h2>
@@ -333,7 +321,7 @@ const scenarios = [
   {
     id: "happy",
     name: "Happy path",
-    blurb: "Sync the demo Project via isomorphic-git (clone or pull from data cache), materialize monorepo subdir if needed, bun install via sidecar, bun run dev, open native preview. Confirm bunEngine.source in state.",
+    blurb: "Sync the demo Project via isomorphic-git (clone or pull from data cache), materialize monorepo subdir if needed, bun install via sidecar, bun run dev, open native preview.",
     steps: [
       { label: "1. Start pipeline (demo Project)", action: "startDefault" },
       { label: "2. Re-open preview window", action: "reopen", needsUrl: true },
@@ -377,10 +365,7 @@ function renderState(s) {
     ["phase", s.phase],
     ["repoUrl", s.repoUrl || "—"],
     ["subdirectory", s.subdirectory || "—"],
-    ["lockfilePM", s.packageManager || "—"],
-    ["bunEngine.source", eng ? eng.source : "—"],
     ["bunEngine.path", eng ? eng.path : "—"],
-    ["systemNodePresent", eng ? String(eng.systemNodePresent) : "—"],
     ["devCommand", s.devCommand || "—"],
     ["workDir", s.workDir || "—"],
     ["previewUrl", s.previewUrl || "—"],
@@ -539,11 +524,13 @@ console.log(`data root: ${DATA_ROOT}`);
 dispatch({ type: "cached_repos", repos: listCachedRepos(DATA_ROOT) });
 
 try {
-	const engine = resolveBunEngine(HERE);
-	console.log(`bunEngine at boot: ${formatBunEngine(engine)}`);
+	const engine = await ensureBunEngine(DATA_ROOT, {
+		onProgress: (line) => console.log(line),
+	});
+	console.log(`bunEngine at boot: ${engine.path}`);
 } catch (err) {
 	console.warn(
-		"bunEngine resolve failed at boot:",
+		"bunEngine ensure failed at boot:",
 		err instanceof Error ? err.message : err,
 	);
 }

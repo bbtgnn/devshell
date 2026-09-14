@@ -19,7 +19,7 @@ Ordered product phases for Devshell. Platform facts live in [research/02-platfor
 | **R4** | Open | `@devshell/client` — types + thin fetch helpers; no-op when Devshell absent |
 | **R5** | Deferred | Flavors (`flavor.json`): branded name/icon, locked Project URL, hide picker — see Deferred |
 | **R6** | Open | Git watch (dirty / ahead-behind); GitHub OAuth **device flow** for private repos (token in OS keychain; `onAuth` for isomorphic-git) |
-| **R7** | Open | Public desktop artifacts without paid signing first: `.app` / Windows app dir / AppImage (or zip). **Bun:** download a **pinned** Bun build into the data root on first launch if not on PATH / `DEVSHELL_BUN_PATH`. Document Gatekeeper / SmartScreen “Open anyway” for unsigned builds |
+| **R7** | Open | Public desktop artifacts without paid signing first: `.app` / Windows app dir / AppImage (or zip). **Bun download (done):** pinned Bun into the data root on first launch when PATH / env / vendor are absent. Still open: packaging outputs + Gatekeeper / SmartScreen “Open anyway” docs for unsigned builds |
 
 ## Deferred
 
