@@ -16,6 +16,8 @@
 		"smoke:pipeline": "deno run -A smoke-pipeline.ts"
 	},
 	"imports": {
+		"@std/fs": "jsr:@std/fs@1.0.24",
+		"@std/path": "jsr:@std/path@1.1.6",
 		"isomorphic-git": "npm:isomorphic-git@1.42.2",
 		"isomorphic-git/http/node": "npm:isomorphic-git@1.42.2/http/node",
 		"fflate": "npm:fflate@0.8.2"

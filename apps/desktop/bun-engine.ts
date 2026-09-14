@@ -1,14 +1,5 @@
-import {
-	chmodSync,
-	copyFileSync,
-	existsSync,
-	mkdirSync,
-	mkdtempSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
-import { dirname, join } from "node:path";
-import { tmpdir } from "node:os";
+import { existsSync } from "@std/fs";
+import { dirname, join } from "@std/path";
 import { unzipSync } from "fflate";
 import type { BunEngineInfo } from "./machine.ts";
 import {
@@ -31,6 +22,14 @@ export type EnsureBunEngineOptions = {
 	version?: string;
 };
 
+function removeIfExists(path: string): void {
+	try {
+		Deno.removeSync(path, { recursive: true });
+	} catch (err) {
+		if (!(err instanceof Deno.errors.NotFound)) throw err;
+	}
+}
+
 function extractBunFromZip(zipBytes: Uint8Array, destFile: string): void {
 	const want = Deno.build.os === "windows" ? "bun.exe" : "bun";
 	const files = unzipSync(zipBytes);
@@ -45,9 +44,9 @@ function extractBunFromZip(zipBytes: Uint8Array, destFile: string): void {
 	if (!data) {
 		throw new Error(`Bun zip entry empty: ${entry}`);
 	}
-	mkdirSync(dirname(destFile), { recursive: true });
-	writeFileSync(destFile, data);
-	if (Deno.build.os !== "windows") chmodSync(destFile, 0o755);
+	Deno.mkdirSync(dirname(destFile), { recursive: true });
+	Deno.writeFileSync(destFile, data);
+	if (Deno.build.os !== "windows") Deno.chmodSync(destFile, 0o755);
 }
 
 export async function downloadPinnedBunEngine(
@@ -80,7 +79,7 @@ export async function downloadPinnedBunEngine(
 		);
 	}
 
-	const staging = mkdtempSync(join(tmpdir(), "devshell-bun-"));
+	const staging = Deno.makeTempDirSync({ prefix: "devshell-bun-" });
 	try {
 		const bytes = new Uint8Array(await response.arrayBuffer());
 		opts.onProgress?.(`extract ${bytes.byteLength} bytes`);
@@ -89,9 +88,9 @@ export async function downloadPinnedBunEngine(
 			Deno.build.os === "windows" ? "bun.exe" : "bun",
 		);
 		extractBunFromZip(bytes, stagingDest);
-		mkdirSync(dirname(dest), { recursive: true });
-		copyFileSync(stagingDest, dest);
-		if (Deno.build.os !== "windows") chmodSync(dest, 0o755);
+		Deno.mkdirSync(dirname(dest), { recursive: true });
+		Deno.copyFileSync(stagingDest, dest);
+		if (Deno.build.os !== "windows") Deno.chmodSync(dest, 0o755);
 		if (!isExecutableFile(dest)) {
 			throw new Error(`Downloaded Bun is not executable: ${dest}`);
 		}
@@ -100,14 +99,14 @@ export async function downloadPinnedBunEngine(
 	} catch (err) {
 		if (existsSync(dest)) {
 			try {
-				rmSync(dest);
+				Deno.removeSync(dest);
 			} catch {
 				// ignore
 			}
 		}
 		throw err;
 	} finally {
-		rmSync(staging, { recursive: true, force: true });
+		removeIfExists(staging);
 	}
 }
 

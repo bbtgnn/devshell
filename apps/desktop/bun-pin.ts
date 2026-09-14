@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { join } from "@std/path";
 
 /** Pinned Bun CLI version downloaded into the Data root when no local engine exists. */
 export const BUN_ENGINE_VERSION = "1.3.12";

@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { join } from "@std/path";
 
 export function resolveDataRoot(): string {
 	const override = Deno.env.get("DEVSHELL_DATA_DIR")?.trim();
