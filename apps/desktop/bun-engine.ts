@@ -7,7 +7,12 @@ import {
 	bunReleaseUrl,
 	cachedBunEnginePath,
 } from "./bun-pin.ts";
-import { isExecutableFile, resolveBunEngine } from "./runner.ts";
+import {
+	cliBinaryName,
+	ensureExecutableMode,
+	isExecutableFile,
+} from "./os/mod.ts";
+import { resolveBunEngine } from "./runner.ts";
 
 export {
 	BUN_ENGINE_VERSION,
@@ -31,7 +36,7 @@ function removeIfExists(path: string): void {
 }
 
 function extractBunFromZip(zipBytes: Uint8Array, destFile: string): void {
-	const want = Deno.build.os === "windows" ? "bun.exe" : "bun";
+	const want = cliBinaryName("bun");
 	const files = unzipSync(zipBytes);
 	const entry = Object.keys(files).find((name) => {
 		const base = name.split("/").pop() ?? name;
@@ -46,7 +51,7 @@ function extractBunFromZip(zipBytes: Uint8Array, destFile: string): void {
 	}
 	Deno.mkdirSync(dirname(destFile), { recursive: true });
 	Deno.writeFileSync(destFile, data);
-	if (Deno.build.os !== "windows") Deno.chmodSync(destFile, 0o755);
+	ensureExecutableMode(destFile);
 }
 
 export async function downloadPinnedBunEngine(
@@ -83,14 +88,11 @@ export async function downloadPinnedBunEngine(
 	try {
 		const bytes = new Uint8Array(await response.arrayBuffer());
 		opts.onProgress?.(`extract ${bytes.byteLength} bytes`);
-		const stagingDest = join(
-			staging,
-			Deno.build.os === "windows" ? "bun.exe" : "bun",
-		);
+		const stagingDest = join(staging, cliBinaryName("bun"));
 		extractBunFromZip(bytes, stagingDest);
 		Deno.mkdirSync(dirname(dest), { recursive: true });
 		Deno.copyFileSync(stagingDest, dest);
-		if (Deno.build.os !== "windows") Deno.chmodSync(dest, 0o755);
+		ensureExecutableMode(dest);
 		if (!isExecutableFile(dest)) {
 			throw new Error(`Downloaded Bun is not executable: ${dest}`);
 		}

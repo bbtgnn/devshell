@@ -8,6 +8,11 @@ import type {
 	CachedRepo,
 } from "./machine.ts";
 import { BUN_ENGINE_VERSION, cachedBunEnginePath } from "./bun-pin.ts";
+import {
+	commandPathNames,
+	isExecutableFile,
+	pathListSeparator,
+} from "./os/mod.ts";
 
 function removeIfExists(path: string): void {
 	try {
@@ -26,32 +31,6 @@ export type ParsedGithub = {
 };
 
 export type BunEngine = BunEngineInfo;
-
-// Dirs can pass X_OK alone on macOS — require a regular file.
-// Windows file modes often lack Unix execute bits; treat regular files as OK.
-export function isExecutableFile(path: string): boolean {
-	try {
-		const st = Deno.statSync(path);
-		if (!st.isFile) return false;
-		if (Deno.build.os !== "windows" && st.mode != null && (st.mode & 0o111) === 0) {
-			return false;
-		}
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-export function pathListSeparator(): string {
-	return Deno.build.os === "windows" ? ";" : ":";
-}
-
-/** Names to try when resolving a command on PATH (Windows adds .exe/.cmd/.bat). */
-export function commandPathNames(cmd: string): string[] {
-	if (Deno.build.os !== "windows") return [cmd];
-	if (/\.(exe|cmd|bat|com)$/i.test(cmd)) return [cmd];
-	return [`${cmd}.exe`, `${cmd}.cmd`, `${cmd}.bat`, cmd];
-}
 
 // Deno.which is not available in all desktop builds.
 function whichOnPath(cmd: string): string | null {
@@ -400,48 +379,4 @@ export async function runCaptured(
 	};
 }
 
-export type LivingProcess = {
-	kill: () => void;
-	wait: Promise<Deno.CommandStatus>;
-};
-
-export function spawnLiving(
-	cmd: string[],
-	opts: {
-		cwd: string;
-		onChunk: (text: string) => void;
-	},
-): LivingProcess {
-	const proc = new Deno.Command(cmd[0], {
-		args: cmd.slice(1),
-		cwd: opts.cwd,
-		stdout: "piped",
-		stderr: "piped",
-	}).spawn();
-
-	const pump = async (stream: ReadableStream<Uint8Array>) => {
-		const reader = stream.getReader();
-		const dec = new TextDecoder();
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
-			opts.onChunk(dec.decode(value, { stream: true }));
-		}
-	};
-
-	void pump(proc.stdout);
-	void pump(proc.stderr);
-
-	return {
-		kill: () => {
-			try {
-				// Windows: TerminateProcess via Deno.kill (no Unix SIGTERM semantics).
-				if (Deno.build.os === "windows") proc.kill();
-				else proc.kill("SIGTERM");
-			} catch {
-				// already dead
-			}
-		},
-		wait: proc.status,
-	};
-}
+export { spawnLiving, type LivingExit, type LivingProcess } from "./os/mod.ts";

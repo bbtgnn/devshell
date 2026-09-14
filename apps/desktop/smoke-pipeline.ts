@@ -1,4 +1,4 @@
-import { resolveDataRoot } from "./paths.ts";
+import { resolveDataRoot } from "./os/mod.ts";
 import { ensureBunEngine } from "./bun-engine.ts";
 import {
 	bunInstallCommand,

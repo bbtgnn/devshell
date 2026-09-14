@@ -5,7 +5,11 @@ import {
 	cachedBunEnginePath,
 	ensureBunEngine,
 } from "./bun-engine.ts";
-import { isExecutableFile } from "./runner.ts";
+import {
+	cliBinaryName,
+	ensureExecutableMode,
+	isExecutableFile,
+} from "./os/mod.ts";
 
 const tmp = await Deno.makeTempDir({ prefix: "devshell-bun-engine-" });
 const dataRoot = join(tmp, "data");
@@ -22,7 +26,7 @@ if (!expectedUrl.endsWith(".zip")) {
 console.log("bunReleaseUrl:", expectedUrl);
 
 const cachePath = cachedBunEnginePath(dataRoot);
-const expectedName = Deno.build.os === "windows" ? "bun.exe" : "bun";
+const expectedName = cliBinaryName("bun");
 if (!cachePath.endsWith(join("engine", `bun-${BUN_ENGINE_VERSION}`, expectedName))) {
 	console.error("FAIL: unexpected cache path", cachePath);
 	Deno.exit(1);
@@ -60,7 +64,7 @@ if (!offlineOk) {
 
 Deno.mkdirSync(join(cachePath, ".."), { recursive: true });
 Deno.writeTextFileSync(cachePath, "#!/bin/sh\necho fake-bun\n");
-if (Deno.build.os !== "windows") Deno.chmodSync(cachePath, 0o755);
+ensureExecutableMode(cachePath);
 
 let fetchCalled = false;
 const cached = await ensureBunEngine(dataRoot, {

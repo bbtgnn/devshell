@@ -13,7 +13,8 @@
 		"smoke:resolve": "deno run -A smoke-resolve.ts",
 		"smoke:bun-engine": "deno run -A smoke-bun-engine.ts",
 		"smoke:bun-download": "deno run -A smoke-bun-download.ts",
-		"smoke:pipeline": "deno run -A smoke-pipeline.ts"
+		"smoke:pipeline": "deno run -A smoke-pipeline.ts",
+		"smoke:process-tree": "deno run -A smoke-process-tree.ts"
 	},
 	"imports": {
 		"@std/fs": "jsr:@std/fs@1.0.24",
