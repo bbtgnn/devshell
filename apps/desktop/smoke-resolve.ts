@@ -1,13 +1,35 @@
 import { join } from "node:path";
 import { resolveAppRoot, resolveDataRoot } from "./paths.ts";
 import {
+	commandPathNames,
 	formatBunEngine,
 	isExecutableFile,
+	pathListSeparator,
 	resolveBunEngine,
 } from "./runner.ts";
 
 const HERE = resolveAppRoot();
 const DATA = resolveDataRoot();
+
+const sep = pathListSeparator();
+const expectedSep = Deno.build.os === "windows" ? ";" : ":";
+if (sep !== expectedSep) {
+	console.error(`FAIL: pathListSeparator=${sep}, expected ${expectedSep}`);
+	Deno.exit(1);
+}
+console.log("pathListSeparator:", sep);
+
+const bunNames = commandPathNames("bun");
+if (Deno.build.os === "windows") {
+	if (!bunNames.includes("bun.exe")) {
+		console.error("FAIL: Windows commandPathNames(bun) missing bun.exe", bunNames);
+		Deno.exit(1);
+	}
+} else if (bunNames.length !== 1 || bunNames[0] !== "bun") {
+	console.error("FAIL: unexpected commandPathNames(bun)", bunNames);
+	Deno.exit(1);
+}
+console.log("commandPathNames(bun):", bunNames.join(", "));
 
 // Trap: a directory named `bun` must never win resolveBunEngine.
 const trapDir = join(DATA, "trap-bun-dir", "bun");
@@ -22,7 +44,11 @@ if (!isExecutableFile(engine.path)) {
 	console.error("FAIL: resolved path is not an executable file");
 	Deno.exit(1);
 }
-if (engine.path === trapDir || engine.path.endsWith("/trap-bun-dir/bun")) {
+if (
+	engine.path === trapDir ||
+	engine.path.endsWith("/trap-bun-dir/bun") ||
+	engine.path.endsWith("\\trap-bun-dir\\bun")
+) {
 	console.error("FAIL: picked directory named bun");
 	Deno.exit(1);
 }

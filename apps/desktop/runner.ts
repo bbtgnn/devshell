@@ -26,30 +26,54 @@ export type ParsedGithub = {
 export type BunEngine = BunEngineInfo;
 
 // Dirs can pass X_OK alone on macOS — require a regular file.
+// Windows file modes often lack Unix execute bits; treat regular files as OK.
 export function isExecutableFile(path: string): boolean {
 	try {
 		const st = Deno.statSync(path);
 		if (!st.isFile) return false;
-		if (st.mode != null && (st.mode & 0o111) === 0) return false;
+		if (Deno.build.os !== "windows" && st.mode != null && (st.mode & 0o111) === 0) {
+			return false;
+		}
 		return true;
 	} catch {
 		return false;
 	}
 }
 
+export function pathListSeparator(): string {
+	return Deno.build.os === "windows" ? ";" : ":";
+}
+
+/** Names to try when resolving a command on PATH (Windows adds .exe/.cmd/.bat). */
+export function commandPathNames(cmd: string): string[] {
+	if (Deno.build.os !== "windows") return [cmd];
+	if (/\.(exe|cmd|bat|com)$/i.test(cmd)) return [cmd];
+	return [`${cmd}.exe`, `${cmd}.cmd`, `${cmd}.bat`, cmd];
+}
+
 // Deno.which is not available in all desktop builds.
 function whichOnPath(cmd: string): string | null {
 	const pathEnv = Deno.env.get("PATH") ?? "";
-	for (const dir of pathEnv.split(":")) {
+	const names = commandPathNames(cmd);
+	for (const dir of pathEnv.split(pathListSeparator())) {
 		if (!dir) continue;
-		const candidate = join(dir, cmd);
-		if (isExecutableFile(candidate)) return candidate;
+		for (const name of names) {
+			const candidate = join(dir, name);
+			if (isExecutableFile(candidate)) return candidate;
+		}
 	}
 	return null;
 }
 
 function systemNodePresent(): boolean {
 	return Boolean(whichOnPath("node") || whichOnPath("npm"));
+}
+
+function firstExistingExecutable(candidates: string[]): string | null {
+	for (const candidate of candidates) {
+		if (isExecutableFile(candidate)) return candidate;
+	}
+	return null;
 }
 
 // Never treat a JS bundle directory named `bun` as the CLI (EACCES posix_spawn).
@@ -70,7 +94,9 @@ export function resolveBunEngine(appRoot: string): BunEngine {
 		join(appRoot, "bin", "bun"),
 		join(appRoot, "bin", "bun.exe"),
 		join(appRoot, "vendor", "bun"),
+		join(appRoot, "vendor", "bun.exe"),
 		join(appRoot, "vendor", "bin", "bun"),
+		join(appRoot, "vendor", "bin", "bun.exe"),
 	];
 
 	try {
@@ -80,27 +106,31 @@ export function resolveBunEngine(appRoot: string): BunEngine {
 			join(execDir, "bun"),
 			join(execDir, "bun.exe"),
 			join(execDir, "bin", "bun"),
+			join(execDir, "bin", "bun.exe"),
 			join(execDir, "..", "Resources", "bin", "bun"),
+			join(execDir, "..", "Resources", "bin", "bun.exe"),
 			join(execDir, "..", "MacOS", "bun"),
 		);
 	} catch {
 		// Deno.execPath unavailable
 	}
 
-	for (const candidate of embeddedCandidates) {
-		if (isExecutableFile(candidate)) {
-			return {
-				path: candidate,
-				source: "embedded",
-				systemNodePresent: nodePresent,
-			};
-		}
+	const embedded = firstExistingExecutable(embeddedCandidates);
+	if (embedded) {
+		return {
+			path: embedded,
+			source: "embedded",
+			systemNodePresent: nodePresent,
+		};
 	}
 
 	const bunInstall = Deno.env.get("BUN_INSTALL")?.trim();
 	if (bunInstall) {
-		const fromInstall = join(bunInstall, "bin", "bun");
-		if (isExecutableFile(fromInstall)) {
+		const fromInstall = firstExistingExecutable([
+			join(bunInstall, "bin", "bun"),
+			join(bunInstall, "bin", "bun.exe"),
+		]);
+		if (fromInstall) {
 			return {
 				path: fromInstall,
 				source: "path-which",
@@ -119,7 +149,7 @@ export function resolveBunEngine(appRoot: string): BunEngine {
 	}
 
 	throw new Error(
-		"No Bun CLI found. Set DEVSHELL_BUN_PATH, run scripts/vendor-bun.sh, or put bun on PATH.",
+		"No Bun CLI found. Set DEVSHELL_BUN_PATH, run scripts/vendor-bun.sh (or vendor-bun.ps1), or put bun on PATH.",
 	);
 }
 
@@ -463,7 +493,9 @@ export function spawnLiving(
 	return {
 		kill: () => {
 			try {
-				proc.kill("SIGTERM");
+				// Windows: TerminateProcess via Deno.kill (no Unix SIGTERM semantics).
+				if (Deno.build.os === "windows") proc.kill();
+				else proc.kill("SIGTERM");
 			} catch {
 				// already dead
 			}

@@ -2,11 +2,21 @@
 
 Desktop orchestrator that syncs a GitHub-backed project, runs its install/dev toolchain via a Bun sidecar, and opens native preview windows.
 
+## Scope
+
+**In scope:** macOS, Windows, and Linux desktop.
+
+**Out of scope:** iOS and Android (native mobile shells, on-device Bun sidecar, mobile companion apps). Deno Desktop does not ship mobile targets; Devshell does not wait on them or adopt another shell for phones.
+
+**Planned engine install:** If no Bun is found, Devshell may download a pinned Bun build into the Data root on first launch (rather than requiring Bun inside the shipped app bundle).
+
+**Deferred product/distribution choices** (signing, auto-update, flavors, CEF, richer installers): see [docs/roadmap.md](docs/roadmap.md).
+
 ## Language
 
 **Devshell**:
-The desktop product that owns control UI, git sync, Bun install/run, and preview windows for a Project.
-_Avoid_: Electrobun app
+The desktop product (macOS / Windows / Linux) that owns control UI, git sync, Bun install/run, and preview windows for a Project.
+_Avoid_: Electrobun app, mobile app, phone companion
 
 **Project**:
 A GitHub repository (optional subdirectory) or local path that Devshell opens, syncs, and runs.
@@ -21,7 +31,7 @@ Durable on-disk home for clone cache, registry, and materialized work dirs (OS a
 _Avoid_: repo-local clone caches
 
 **Bun engine**:
-The resolved Bun CLI executable used for install and run (`embedded` or `path-which`).
+The resolved Bun CLI executable used for install and run (`embedded`, `path-which`, or a pinned download under the Data root).
 _Avoid_: package manager (lockfile PM is informational only)
 
 **Preview window**:

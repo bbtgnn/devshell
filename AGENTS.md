@@ -20,5 +20,6 @@ An ADR records the design decision and why the alternatives lost. Paths, module 
 
 - **Domain** (naming Project, Work root, Data root, Bun engine, Guest app, Client package, Flavor, …): read [CONTEXT.md](CONTEXT.md). Resolve or change a term → update it there.
 - **Architecture** (Deno Desktop shell, Bun sidecar, isomorphic-git sync, preview windows, rejecting Electrobun/browser chrome): read [docs/adr/](docs/adr/), start with [0001](docs/adr/0001-deno-desktop-shell-bun-sidecar.md). Hard-to-reverse trade-off → add a durable ADR.
+- **Roadmap** (phases R2+, near-term kill, deferred packaging/signing/flavors): [docs/roadmap.md](docs/roadmap.md).
 - **Run / smoke / data-dir overrides**: [README.md](README.md); tasks and desktop config live in the repo’s `deno.json` files.
-- **Prior art** (positioning vs local stack desktops / launchers / cloud IDEs): [research/](research/).
+- **Prior art / platforms** (positioning; Windows/Linux portability — mobile out of scope): [research/](research/), especially [01](research/01-prior-art-local-repo-dev-orchestrators.md) and [02](research/02-platform-specific-windows-linux-mobile.md).

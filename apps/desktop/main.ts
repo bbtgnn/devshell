@@ -7,6 +7,7 @@ import {
 	type SessionState,
 } from "./machine.ts";
 import { resolveAppRoot, resolveDataRoot } from "./paths.ts";
+import { writeClipboard } from "./clipboard.ts";
 import {
 	bunDevCommand,
 	bunInstallCommand,
@@ -521,16 +522,7 @@ function bindWindow(win: DesktopWindow) {
 	});
 	win.bind("copyLogs", async () => {
 		const text = state.logTail.join("\n");
-		const proc = new Deno.Command("pbcopy", {
-			stdin: "piped",
-			stdout: "null",
-			stderr: "null",
-		}).spawn();
-		const writer = proc.stdin.getWriter();
-		await writer.write(new TextEncoder().encode(text));
-		await writer.close();
-		const status = await proc.status;
-		if (!status.success) throw new Error(`pbcopy exited ${status.code}`);
+		await writeClipboard(text);
 		return { ok: true, lines: state.logTail.length, bytes: text.length };
 	});
 }

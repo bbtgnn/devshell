@@ -7,7 +7,9 @@ Stack (see [ADR 0001](docs/adr/0001-deno-desktop-shell-bun-sidecar.md)): **Deno 
 ## Requirements
 
 - **Deno ≥ 2.9** (`deno desktop`)
-- **Bun** on `PATH`, or vendor one: `bash apps/desktop/scripts/vendor-bun.sh`
+- **Bun** on `PATH`, or vendor one:
+  - macOS / Linux: `bash apps/desktop/scripts/vendor-bun.sh`
+  - Windows: `powershell -File apps/desktop/scripts/vendor-bun.ps1`
 
 ## Layout
 
@@ -43,10 +45,16 @@ deno task smoke:resolve
 deno task smoke:pipeline
 ```
 
-Clone/work cache lives under the OS app-data dir (macOS: `~/Library/Application Support/Devshell/`). Override with `DEVSHELL_DATA_DIR`.
+Clone/work cache lives under the OS app-data dir:
+
+- macOS: `~/Library/Application Support/Devshell/`
+- Windows: `%LOCALAPPDATA%\Devshell\`
+- Linux: `$XDG_DATA_HOME/devshell` or `~/.local/share/devshell`
+
+Override with `DEVSHELL_DATA_DIR`. Targets are **desktop only** (no iOS/Android) — see [CONTEXT.md](CONTEXT.md).
 
 Embedded Bun override: `DEVSHELL_BUN_PATH=/path/to/bun`.
 
 ## Domain language
 
-See [CONTEXT.md](CONTEXT.md).
+See [CONTEXT.md](CONTEXT.md). Phases and deferred work: [docs/roadmap.md](docs/roadmap.md).
