@@ -1,6 +1,6 @@
-import { resolveDataRoot, runCaptured } from "./os/mod.ts";
-import { ensureBunEngine } from "./bun-engine.ts";
-import { syncProject } from "./project-sync.ts";
+import { resolveDataRoot, runCaptured } from "../os/mod.ts";
+import { ensureBunEngine } from "../bun-engine.ts";
+import { syncProject } from "../project-sync.ts";
 
 const DATA = resolveDataRoot();
 const DEFAULT =

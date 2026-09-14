@@ -2,8 +2,8 @@ import { join } from "@std/path";
 import {
 	BUN_ENGINE_VERSION,
 	ensureBunEngine,
-} from "./bun-engine.ts";
-import { isExecutableFile } from "./os/mod.ts";
+} from "../bun-engine.ts";
+import { isExecutableFile } from "../os/mod.ts";
 
 const tmp = await Deno.makeTempDir({ prefix: "devshell-bun-dl-" });
 const dataRoot = join(tmp, "data");

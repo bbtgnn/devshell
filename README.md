@@ -13,6 +13,7 @@ Stack (see [ADR 0001](docs/adr/0001-deno-desktop-shell-bun-sidecar.md)): **Deno 
 
 ```
 apps/desktop/          # Deno Desktop control + preview
+apps/desktop/smoke/    # headless smokes (*.test.ts + network scripts)
 packages/client/       # @devshell/client stub (later)
 docs/adr/
 research/
@@ -38,9 +39,10 @@ Default demo target: [Astro’s blog example](https://github.com/withastro/astro
 
 ### Headless smokes
 
+Fast checks live under `apps/desktop/smoke/*.test.ts` (`deno task test`). Network / full-pipeline scripts stay as tasks:
+
 ```bash
-deno task smoke:resolve
-deno task smoke:bun-engine
+deno task test
 deno task smoke:bun-download   # network; PATH-stripped download into a temp data dir
 deno task smoke:pipeline
 ```

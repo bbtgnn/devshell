@@ -4,6 +4,7 @@
 	"minimumDependencyAge": "0",
 	"tasks": {
 		"desktop": "deno task --cwd apps/desktop desktop",
+		"test": "deno task --cwd apps/desktop test",
 		"smoke:resolve": "deno task --cwd apps/desktop smoke:resolve",
 		"smoke:bun-engine": "deno task --cwd apps/desktop smoke:bun-engine",
 		"smoke:bun-download": "deno task --cwd apps/desktop smoke:bun-download",

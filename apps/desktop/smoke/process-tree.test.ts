@@ -1,12 +1,9 @@
-/**
- * Smoke: spawn a small process tree that holds a TCP port, stop it via
- * ProcessHost, assert the port is reclaimable (tree torn down).
- */
+import { assert } from "@std/assert";
 import { dirname, fromFileUrl, join } from "@std/path";
-import { spawnLiving } from "./os/living.ts";
+import { spawnLiving } from "../os/living.ts";
 
 const here = dirname(fromFileUrl(import.meta.url));
-const holdScript = join(here, "smoke-hold-port.ts");
+const holdScript = join(here, "hold-port.ts");
 
 function tryListen(port: number): Deno.Listener | null {
 	try {
@@ -52,36 +49,32 @@ async function assertPortFree(port: number, timeoutMs: number): Promise<void> {
 	throw new Error(`port ${port} still held after stop (${timeoutMs}ms)`);
 }
 
-const port = pickPort();
-const deno = Deno.execPath();
+Deno.test({
+	name: "process-tree stop reclaims held port",
+	ignore: Deno.build.os === "windows",
+	fn: async () => {
+		const port = pickPort();
+		const deno = Deno.execPath();
 
-// Shell is process-group leader; Deno hold-port child must die with the group.
-const living = spawnLiving(
-	[
-		"sh",
-		"-c",
-		`"${deno}" run -A "${holdScript}" ${port} & wait`,
-	],
-	{
-		cwd: here,
-		onChunk: (text) => {
-			const line = text.trim();
-			if (line) console.log("  ", line);
-		},
+		const living = spawnLiving(
+			[
+				"sh",
+				"-c",
+				`"${deno}" run -A "${holdScript}" ${port} & wait`,
+			],
+			{
+				cwd: here,
+				onChunk: (text) => {
+					const line = text.trim();
+					if (line) console.log("  ", line);
+				},
+			},
+		);
+
+		await waitForPort(port, 5_000);
+		await living.stop();
+		const exit = await living.exited;
+		assert(exit.stopped, "expected exited.stopped after living.stop()");
+		await assertPortFree(port, 5_000);
 	},
-);
-
-console.log(`spawned tree holding 127.0.0.1:${port}`);
-await waitForPort(port, 5_000);
-console.log("port is held");
-
-await living.stop();
-const exit = await living.exited;
-console.log("stopped", exit);
-
-if (!exit.stopped) {
-	throw new Error("expected exited.stopped after living.stop()");
-}
-
-await assertPortFree(port, 5_000);
-console.log("SMOKE PROCESS-TREE OK", { port, code: exit.code });
+});
