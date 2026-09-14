@@ -3,21 +3,36 @@ import { join } from "@std/path";
 import type { BunEngineInfo } from "./bun-engine.ts";
 import { ensureBunEngine } from "./bun-engine.ts";
 import {
-	canStart,
-	canStop,
-	initialState,
-	reduce,
-	type Action,
-	type SessionState,
-} from "./machine.ts";
-import {
 	runCaptured,
 	spawnLiving,
 	type LivingProcess,
 } from "./os/mod.ts";
-import { listCachedRepos, syncProject } from "./project-sync.ts";
+import { listCachedRepos, syncProject, type CachedRepo } from "./project-sync.ts";
 
-export type { SessionState };
+export type Phase =
+	| "idle"
+	| "resolving"
+	| "cloning"
+	| "installing"
+	| "starting"
+	| "waiting_for_url"
+	| "previewing"
+	| "failed"
+	| "stopped";
+
+export type SessionState = {
+	phase: Phase;
+	repoUrl: string;
+	subdirectory: string;
+	workDir: string;
+	bunEngine: BunEngineInfo | null;
+	devCommand: string | null;
+	previewUrl: string | null;
+	cachedRepos: CachedRepo[];
+	lastChanged: string | null;
+	logTail: string[];
+	error: string | null;
+};
 
 export type ProjectSessionSnapshot = SessionState & {
 	canStart: boolean;
@@ -35,6 +50,160 @@ export type ProjectSession = {
 	reset: () => ProjectSessionSnapshot;
 	snapshot: () => ProjectSessionSnapshot;
 };
+
+type Action =
+	| { type: "reset" }
+	| { type: "start"; repoUrl: string; subdirectory?: string }
+	| { type: "cloning" }
+	| {
+			type: "ready";
+			workDir: string;
+			devCommand: string;
+			bunEngine: BunEngineInfo;
+	  }
+	| { type: "starting" }
+	| { type: "waiting_for_url" }
+	| { type: "cached_repos"; repos: CachedRepo[] }
+	| { type: "preview_url"; url: string }
+	| { type: "log"; line: string }
+	| { type: "fail"; error: string }
+	| { type: "stop" };
+
+const MAX_LOG = 40;
+
+const STARTABLE: ReadonlySet<Phase> = new Set([
+	"idle",
+	"failed",
+	"stopped",
+	"previewing",
+]);
+
+function initialState(): SessionState {
+	return {
+		phase: "idle",
+		repoUrl: "",
+		subdirectory: "",
+		workDir: "",
+		bunEngine: null,
+		devCommand: null,
+		previewUrl: null,
+		cachedRepos: [],
+		lastChanged: null,
+		logTail: [],
+		error: null,
+	};
+}
+
+function touch(state: SessionState, fields: string[]): SessionState {
+	return { ...state, lastChanged: fields.join(", ") };
+}
+
+function canStart(state: SessionState): boolean {
+	return STARTABLE.has(state.phase);
+}
+
+function canStop(state: SessionState): boolean {
+	return (
+		state.phase !== "idle" &&
+		state.phase !== "stopped" &&
+		state.phase !== "failed"
+	);
+}
+
+function reduce(state: SessionState, action: Action): SessionState {
+	switch (action.type) {
+		case "reset":
+			return touch(
+				{ ...initialState(), cachedRepos: state.cachedRepos },
+				["phase", "repoUrl", "error", "previewUrl"],
+			);
+
+		case "start":
+			return touch(
+				{
+					...initialState(),
+					phase: "resolving",
+					repoUrl: action.repoUrl.trim(),
+					subdirectory: (action.subdirectory ?? "").trim(),
+					cachedRepos: state.cachedRepos,
+				},
+				["phase", "repoUrl", "subdirectory"],
+			);
+
+		case "cloning":
+			if (state.phase !== "resolving") return state;
+			return touch({ ...state, phase: "cloning", error: null }, ["phase"]);
+
+		case "ready":
+			if (state.phase !== "cloning") return state;
+			return touch(
+				{
+					...state,
+					phase: "installing",
+					workDir: action.workDir,
+					devCommand: action.devCommand,
+					bunEngine: action.bunEngine,
+					error: null,
+				},
+				["phase", "workDir", "devCommand", "bunEngine"],
+			);
+
+		case "starting":
+			if (state.phase !== "installing") return state;
+			return touch({ ...state, phase: "starting", error: null }, ["phase"]);
+
+		case "waiting_for_url":
+			if (state.phase !== "starting") return state;
+			return touch(
+				{ ...state, phase: "waiting_for_url", error: null },
+				["phase"],
+			);
+
+		case "cached_repos":
+			return touch({ ...state, cachedRepos: action.repos }, ["cachedRepos"]);
+
+		case "preview_url":
+			if (
+				state.phase !== "waiting_for_url" &&
+				state.phase !== "starting"
+			) {
+				return state;
+			}
+			return touch(
+				{
+					...state,
+					phase: "previewing",
+					previewUrl: action.url,
+					error: null,
+				},
+				["phase", "previewUrl"],
+			);
+
+		case "log": {
+			const logTail = [...state.logTail, action.line].slice(-MAX_LOG);
+			return touch({ ...state, logTail }, ["logTail"]);
+		}
+
+		case "fail":
+			return touch(
+				{ ...state, phase: "failed", error: action.error },
+				["phase", "error"],
+			);
+
+		case "stop":
+			return touch(
+				{
+					...state,
+					phase: state.phase === "idle" ? "idle" : "stopped",
+					error: null,
+				},
+				["phase"],
+			);
+
+		default:
+			return state;
+	}
+}
 
 function bunInstallCommand(engine: BunEngineInfo): string[] {
 	return [engine.path, "install"];
@@ -118,6 +287,7 @@ export function createProjectSession(
 				type: "log",
 				line: `bunEngine ${engine.path}`,
 			});
+			dispatch({ type: "cloning" });
 
 			const synced = await syncProject(
 				state.repoUrl,
@@ -162,9 +332,9 @@ export function createProjectSession(
 				);
 			}
 
-			dispatch({ type: "phase", phase: "starting" });
+			dispatch({ type: "starting" });
 			dispatch({ type: "log", line: `spawn ${devCmd.join(" ")}` });
-			dispatch({ type: "phase", phase: "waiting_for_url" });
+			dispatch({ type: "waiting_for_url" });
 
 			let found: string | null = null;
 			living = spawnLiving(devCmd, {

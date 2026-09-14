@@ -43,6 +43,7 @@ The Devshell window for open/sync/run/stop, status, and logs.
 
 **Project session**:
 The module that opens a Project end-to-end: resolve Bun engine, sync into the Work root, install, run Guest `dev`, and emit preview URL, logs, terminal phases, and cancel. Control starts/stops/reads a snapshot; Preview window chrome stays outside.
+Phases (Control `phase` string): `idle` → `resolving` (Bun engine) → `cloning` (sync) → `installing` → `starting` → `waiting_for_url` → `previewing`, or `failed` / `stopped`.
 _Avoid_: treating Control bindings or `main` as the pipeline owner
 
 **Guest app**:
