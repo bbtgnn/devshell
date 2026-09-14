@@ -2,22 +2,12 @@ import { resolveDataRoot } from "./os/mod.ts";
 import { ensureBunEngine } from "./bun-engine.ts";
 import { createProjectSession } from "./project-session.ts";
 import { bindControlWindow, controlPageHtml } from "./control-window.ts";
-
-// Deno.BrowserWindow ships with `deno desktop` but isn't in stable lib types yet.
-type DesktopWindow = {
-	setTitle: (title: string) => void;
-	navigate: (url: string) => void;
-	show: () => void;
-	focus: () => void;
-	reload: () => void;
-	bind: (name: string, handler: (...args: unknown[]) => unknown) => void;
-};
-
-type DesktopWindowCtor = new (opts?: {
-	title?: string;
-	width?: number;
-	height?: number;
-}) => DesktopWindow;
+import {
+	createWaitingPreview,
+	type DesktopWindow,
+	type DesktopWindowCtor,
+	openPreview,
+} from "./preview-window.ts";
 
 const BrowserWindow = (Deno as unknown as { BrowserWindow?: DesktopWindowCtor })
 	.BrowserWindow;
@@ -29,16 +19,9 @@ const DEFAULT_REPO =
 
 let previewWin!: DesktopWindow;
 
-function openPreview(url: string) {
-	previewWin.setTitle(`Preview — ${url}`);
-	previewWin.navigate(url);
-	previewWin.show();
-	previewWin.focus();
-}
-
 const session = createProjectSession({
 	dataRoot: DATA_ROOT,
-	onPreviewUrl: openPreview,
+	onPreviewUrl: (url) => openPreview(previewWin, url),
 });
 
 if (!BrowserWindow) {
@@ -69,22 +52,11 @@ const controlWin = new BrowserWindow({
 	height: 860,
 });
 
-previewWin = new BrowserWindow({
-	title: "Preview (waiting…)",
-	width: 1100,
-	height: 760,
-});
-previewWin.navigate(
-	"data:text/html," +
-		encodeURIComponent(`<!doctype html><meta charset=utf-8>
-<title>Waiting</title>
-<body style="font:16px/1.4 system-ui;padding:2rem;background:#111;color:#eee">
-<h1>Preview</h1>
-<p>Start the pipeline from the control window. The Project local URL will open here.</p>
-</body>`),
-);
+previewWin = createWaitingPreview(BrowserWindow);
 
-bindControlWindow(controlWin, session, { reopenPreview: openPreview });
+bindControlWindow(controlWin, session, {
+	reopenPreview: (url) => openPreview(previewWin, url),
+});
 
 Deno.serve(async (req) => {
 	const url = new URL(req.url);
