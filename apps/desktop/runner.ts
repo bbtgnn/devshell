@@ -7,12 +7,6 @@ import type {
 	BunEngineInfo,
 	CachedRepo,
 } from "./machine.ts";
-import { BUN_ENGINE_VERSION, cachedBunEnginePath } from "./bun-pin.ts";
-import {
-	commandPathNames,
-	isExecutableFile,
-	pathListSeparator,
-} from "./os/mod.ts";
 
 function removeIfExists(path: string): void {
 	try {
@@ -30,70 +24,11 @@ export type ParsedGithub = {
 	branch: string;
 };
 
-export type BunEngine = BunEngineInfo;
-
-// Deno.which is not available in all desktop builds.
-function whichOnPath(cmd: string): string | null {
-	const pathEnv = Deno.env.get("PATH") ?? "";
-	const names = commandPathNames(cmd);
-	for (const dir of pathEnv.split(pathListSeparator())) {
-		if (!dir) continue;
-		for (const name of names) {
-			const candidate = join(dir, name);
-			if (isExecutableFile(candidate)) return candidate;
-		}
-	}
-	return null;
-}
-
-function firstExistingExecutable(candidates: string[]): string | null {
-	for (const candidate of candidates) {
-		if (isExecutableFile(candidate)) return candidate;
-	}
-	return null;
-}
-
-// Never treat a JS bundle directory named `bun` as the CLI (EACCES posix_spawn).
-export function resolveBunEngine(dataRoot?: string): BunEngine {
-	const envPath = Deno.env.get("DEVSHELL_BUN_PATH")?.trim();
-	if (envPath) {
-		if (!isExecutableFile(envPath)) {
-			throw new Error(
-				`DEVSHELL_BUN_PATH is not an executable file: ${envPath}`,
-			);
-		}
-		return { path: envPath };
-	}
-
-	if (dataRoot) {
-		const cached = cachedBunEnginePath(dataRoot, BUN_ENGINE_VERSION);
-		if (isExecutableFile(cached)) {
-			return { path: cached };
-		}
-	}
-
-	const bunInstall = Deno.env.get("BUN_INSTALL")?.trim();
-	if (bunInstall) {
-		const fromInstall = firstExistingExecutable([
-			join(bunInstall, "bin", "bun"),
-			join(bunInstall, "bin", "bun.exe"),
-		]);
-		if (fromInstall) return { path: fromInstall };
-	}
-
-	const which = whichOnPath("bun");
-	if (which) return { path: which };
-
-	throw new Error(
-		"No Bun CLI found. Put bun on PATH, set DEVSHELL_BUN_PATH, or let Devshell download the pinned engine on start.",
-	);
-}
-
-export function bunInstallCommand(engine: BunEngine): string[] {
+export function bunInstallCommand(engine: BunEngineInfo): string[] {
 	return [engine.path, "install"];
 }
 
-export function bunDevCommand(engine: BunEngine, dir: string): string[] {
+export function bunDevCommand(engine: BunEngineInfo, dir: string): string[] {
 	const pkgPath = join(dir, "package.json");
 	if (!existsSync(pkgPath)) {
 		throw new Error(`No package.json in ${dir}`);

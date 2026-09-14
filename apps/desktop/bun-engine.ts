@@ -9,10 +9,11 @@ import {
 } from "./bun-pin.ts";
 import {
 	cliBinaryName,
+	commandPathNames,
 	ensureExecutableMode,
 	isExecutableFile,
+	pathListSeparator,
 } from "./os/mod.ts";
-import { resolveBunEngine } from "./runner.ts";
 
 export {
 	BUN_ENGINE_VERSION,
@@ -26,6 +27,66 @@ export type EnsureBunEngineOptions = {
 	fetch?: typeof globalThis.fetch;
 	version?: string;
 };
+
+export class BunEngineNotFoundError extends Error {
+	override name = "BunEngineNotFoundError";
+}
+
+function whichOnPath(cmd: string): string | null {
+	const pathEnv = Deno.env.get("PATH") ?? "";
+	const names = commandPathNames(cmd);
+	for (const dir of pathEnv.split(pathListSeparator())) {
+		if (!dir) continue;
+		for (const name of names) {
+			const candidate = join(dir, name);
+			if (isExecutableFile(candidate)) return candidate;
+		}
+	}
+	return null;
+}
+
+function firstExistingExecutable(candidates: string[]): string | null {
+	for (const candidate of candidates) {
+		if (isExecutableFile(candidate)) return candidate;
+	}
+	return null;
+}
+
+// Never treat a JS bundle directory named `bun` as the CLI (EACCES posix_spawn).
+export function resolveBunEngine(dataRoot?: string): BunEngineInfo {
+	const envPath = Deno.env.get("DEVSHELL_BUN_PATH")?.trim();
+	if (envPath) {
+		if (!isExecutableFile(envPath)) {
+			throw new Error(
+				`DEVSHELL_BUN_PATH is not an executable file: ${envPath}`,
+			);
+		}
+		return { path: envPath };
+	}
+
+	if (dataRoot) {
+		const cached = cachedBunEnginePath(dataRoot, BUN_ENGINE_VERSION);
+		if (isExecutableFile(cached)) {
+			return { path: cached };
+		}
+	}
+
+	const bunInstall = Deno.env.get("BUN_INSTALL")?.trim();
+	if (bunInstall) {
+		const fromInstall = firstExistingExecutable([
+			join(bunInstall, "bin", "bun"),
+			join(bunInstall, "bin", "bun.exe"),
+		]);
+		if (fromInstall) return { path: fromInstall };
+	}
+
+	const which = whichOnPath("bun");
+	if (which) return { path: which };
+
+	throw new BunEngineNotFoundError(
+		"No Bun CLI found. Put bun on PATH, set DEVSHELL_BUN_PATH, or let Devshell download the pinned engine on start.",
+	);
+}
 
 function removeIfExists(path: string): void {
 	try {
@@ -121,8 +182,8 @@ export async function ensureBunEngine(
 ): Promise<BunEngineInfo> {
 	try {
 		return resolveBunEngine(dataRoot);
-	} catch {
-		// fall through to download
+	} catch (err) {
+		if (!(err instanceof BunEngineNotFoundError)) throw err;
 	}
 	return await downloadPinnedBunEngine(dataRoot, opts);
 }

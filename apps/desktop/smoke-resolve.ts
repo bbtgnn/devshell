@@ -5,7 +5,7 @@ import {
 	pathListSeparator,
 	resolveDataRoot,
 } from "./os/mod.ts";
-import { resolveBunEngine } from "./runner.ts";
+import { resolveBunEngine } from "./bun-engine.ts";
 
 const DATA = resolveDataRoot();
 
