@@ -1,3 +1,7 @@
+import type { CachedRepo } from "./project-sync.ts";
+
+export type { CachedRepo };
+
 export type Phase =
 	| "idle"
 	| "cloning"
@@ -10,15 +14,6 @@ export type Phase =
 
 export type BunEngineInfo = {
 	path: string;
-};
-
-export type CachedRepo = {
-	id: string;
-	cloneUrl: string;
-	branch: string;
-	localPath: string;
-	lastSyncedAt: string;
-	lastError?: string;
 };
 
 export type SessionState = {

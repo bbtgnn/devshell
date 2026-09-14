@@ -14,14 +14,11 @@ import {
 import {
 	bunDevCommand,
 	bunInstallCommand,
-	ensureRepo,
 	extractLocalUrl,
-	listCachedRepos,
-	materializeWorkDir,
-	parseGithubInput,
 	runCaptured,
 } from "./runner.ts";
 import { ensureBunEngine } from "./bun-engine.ts";
+import { listCachedRepos, syncProject } from "./project-sync.ts";
 
 // Deno.BrowserWindow ships with `deno desktop` but isn't in stable lib types yet.
 type DesktopWindow = {
@@ -95,37 +92,26 @@ async function runPipeline(repoUrl: string, subdirectory = "") {
 			line: `bunEngine ${engine.path}`,
 		});
 
-		const parsed = parseGithubInput(repoUrl, subdirectory);
-		dispatch({
-			type: "log",
-			line: `sync ${parsed.cloneUrl} @ ${parsed.branch}${
-				parsed.subdirectory ? ` / ${parsed.subdirectory}` : ""
-			}`,
-		});
-
-		const ensured = await ensureRepo(parsed, DATA_ROOT, (line) => {
-			if (token !== runToken) return;
-			dispatch({ type: "log", line });
-		});
-		if (token !== runToken) return;
-		dispatch({ type: "cached_repos", repos: ensured.repos });
-		dispatch({
-			type: "log",
-			line:
-				ensured.action === "pulled"
-					? `cache hit → pull (${ensured.cloneDir})`
-					: `fresh clone (${ensured.cloneDir})`,
-		});
-
-		const dir = materializeWorkDir(
-			ensured.cloneDir,
-			parsed.subdirectory,
+		const synced = await syncProject(
+			repoUrl,
+			subdirectory,
 			DATA_ROOT,
 			(line) => {
 				if (token !== runToken) return;
 				dispatch({ type: "log", line });
 			},
 		);
+		if (token !== runToken) return;
+		dispatch({ type: "cached_repos", repos: synced.repos });
+		dispatch({
+			type: "log",
+			line:
+				synced.action === "pulled"
+					? `cache hit → pull (${synced.workDir})`
+					: `fresh clone (${synced.workDir})`,
+		});
+
+		const dir = synced.workDir;
 		const installCmd = bunInstallCommand(engine);
 		const devCmd = bunDevCommand(engine, dir);
 		dispatch({

@@ -1,12 +1,7 @@
 import { resolveDataRoot } from "./os/mod.ts";
 import { ensureBunEngine } from "./bun-engine.ts";
-import {
-	bunInstallCommand,
-	ensureRepo,
-	materializeWorkDir,
-	parseGithubInput,
-	runCaptured,
-} from "./runner.ts";
+import { bunInstallCommand, runCaptured } from "./runner.ts";
+import { syncProject } from "./project-sync.ts";
 
 const DATA = resolveDataRoot();
 const DEFAULT =
@@ -18,21 +13,13 @@ const engine = await ensureBunEngine(DATA, {
 });
 console.log("bunEngine", engine.path);
 
-const parsed = parseGithubInput(DEFAULT);
-console.log("sync", parsed);
-const ensured = await ensureRepo(parsed, DATA, (line) => console.log("  ", line));
-console.log("ensureRepo action:", ensured.action, "→", ensured.cloneDir);
-
-const dir = materializeWorkDir(
-	ensured.cloneDir,
-	parsed.subdirectory,
-	DATA,
-	(line) => console.log("  ", line),
+const synced = await syncProject(DEFAULT, "", DATA, (line) =>
+	console.log("  ", line)
 );
-console.log("workDir:", dir);
+console.log("sync action:", synced.action, "→", synced.workDir);
 
 const install = await runCaptured(bunInstallCommand(engine), {
-	cwd: dir,
+	cwd: synced.workDir,
 	onLine: (line) => console.log("  ", line),
 });
 if (!install.success) {
@@ -42,6 +29,6 @@ if (!install.success) {
 
 console.log("SMOKE PIPELINE OK", {
 	bunPath: engine.path,
-	gitAction: ensured.action,
-	workDir: dir,
+	gitAction: synced.action,
+	workDir: synced.workDir,
 });
