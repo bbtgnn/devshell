@@ -1,5 +1,4 @@
-import { join } from "node:path";
-import { mkdirSync, writeFileSync, chmodSync, rmSync } from "node:fs";
+import { join } from "@std/path";
 import {
 	BUN_ENGINE_VERSION,
 	bunReleaseUrl,
@@ -59,9 +58,9 @@ if (!offlineOk) {
 	Deno.exit(1);
 }
 
-mkdirSync(join(cachePath, ".."), { recursive: true });
-writeFileSync(cachePath, "#!/bin/sh\necho fake-bun\n");
-if (Deno.build.os !== "windows") chmodSync(cachePath, 0o755);
+Deno.mkdirSync(join(cachePath, ".."), { recursive: true });
+Deno.writeTextFileSync(cachePath, "#!/bin/sh\necho fake-bun\n");
+if (Deno.build.os !== "windows") Deno.chmodSync(cachePath, 0o755);
 
 let fetchCalled = false;
 const cached = await ensureBunEngine(dataRoot, {
@@ -84,7 +83,11 @@ if (!isExecutableFile(cached.path)) {
 }
 console.log("cache hit:", cached.path);
 
-rmSync(tmp, { recursive: true, force: true });
+try {
+	Deno.removeSync(tmp, { recursive: true });
+} catch (err) {
+	if (!(err instanceof Deno.errors.NotFound)) throw err;
+}
 if (prevPath != null) Deno.env.set("PATH", prevPath);
 else Deno.env.delete("PATH");
 if (prevBunInstall != null) Deno.env.set("BUN_INSTALL", prevBunInstall);

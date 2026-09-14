@@ -1,5 +1,4 @@
-import { join } from "node:path";
-import { rmSync } from "node:fs";
+import { join } from "@std/path";
 import {
 	BUN_ENGINE_VERSION,
 	ensureBunEngine,
@@ -54,7 +53,11 @@ try {
 	}
 	console.log("OK smoke-bun-download (network + reuse)");
 } finally {
-	rmSync(tmp, { recursive: true, force: true });
+	try {
+		Deno.removeSync(tmp, { recursive: true });
+	} catch (err) {
+		if (!(err instanceof Deno.errors.NotFound)) throw err;
+	}
 	if (prevPath != null) Deno.env.set("PATH", prevPath);
 	else Deno.env.delete("PATH");
 	if (prevBunInstall != null) Deno.env.set("BUN_INSTALL", prevBunInstall);

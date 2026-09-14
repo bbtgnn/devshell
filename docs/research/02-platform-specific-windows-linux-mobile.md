@@ -9,8 +9,8 @@
 1. **Product scope (2026-09-14): desktop only.** iOS/Android are out of scope — see [CONTEXT.md](../CONTEXT.md). Research below still notes Deno’s “Not yet” for mobile so the constraint is documented; it is not a Devshell roadmap item.
 2. **Deno Desktop officially targets macOS / Windows / Linux.** Official comparison table lists **iOS / Android: Not yet**.
 3. **Packaging matrix is real for all three desktops** (`.app`/`.dmg`, Windows dir/`.msi`, Linux dir/AppImage/deb/rpm) with cross-compile via `--target` / `--all-targets`. One host exception: **`.dmg` requires a macOS host** (`hdiutil`).
-4. **Devshell desktop portability (code):** PATH list separator and `bun.exe` lookup, OS clipboard helper (`clipboard.ts`), and Windows process kill without SIGTERM were added 2026-09-14. Bun is resolved via PATH / env / pinned Data-root download (no vendor scripts). Remaining packaging gaps (WebKitGTK vs CEF, Windows auto-update) are still open — see §7.
-5. **Auto-update does not apply on Windows** (patches download/stage; launcher does not swap). Deno has **no native clipboard API** yet — Devshell uses OS clipboard CLIs plus webview `navigator.clipboard` fallback in the control UI.
+4. **Devshell desktop portability (code):** PATH list separator and `bun.exe` lookup, and Windows process kill without SIGTERM were added 2026-09-14. Bun is resolved via PATH / env / pinned Data-root download (no vendor scripts). Remaining packaging gaps (WebKitGTK vs CEF, Windows auto-update) are still open — see §7.
+5. **Auto-update does not apply on Windows** (patches download/stage; launcher does not swap). Deno has **no native clipboard API** yet — Devshell control-UI “copy logs” uses webview `navigator.clipboard.writeText` on the button click (Deno’s documented interim path).
 
 ---
 
@@ -144,7 +144,7 @@ Code under `apps/desktop/`. Status as of **2026-09-14** portability pass.
 
 | Assumption | Location | Platform impact | Severity |
 | --- | --- | --- | --- |
-| Clipboard via **`clipboard.ts`** (`pbcopy` / `clip` / `wl-copy`·`xclip`·`xsel`) | `clipboard.ts` + `main.ts` `copyLogs` | OS CLI helpers; control UI also falls back to `navigator.clipboard` | **Addressed** (needs Linux helper installed, or webview fallback) |
+| Clipboard via webview **`navigator.clipboard.writeText`** on Copy logs click | `main.ts` control page | Deno’s documented interim API; no OS CLI helpers | **Addressed** |
 | `pathListSeparator` + `commandPathNames` | `runner.ts` `whichOnPath` | Windows uses `;` and `bun.exe` / `node.exe` | **Addressed** |
 | `BUN_INSTALL` / embedded candidates include **`bun.exe`** | `runner.ts` | Matches Windows Bun layout | **Addressed** |
 | macOS bundle paths `../Resources/bin/bun`, `../MacOS/bun` | `runner.ts` | Matches Deno Desktop `.app` layout. Harmless no-ops on Win/Linux dir layouts | Packaging-aware (macOS); incomplete for Windows dir / Linux AppImage |
@@ -181,10 +181,8 @@ Also honors `DEVSHELL_DATA_DIR` override and `HOME` / `USERPROFILE` — sensible
 
 | Priority | Gap | Why |
 | --- | --- | --- |
-| P1 | Clipboard helpers may be missing | Needs `wl-copy` / `xclip` / `xsel`, else webview Clipboard API fallback |
-| P1 | WebKitGTK for `webview` backend | Host `libwebkit2gtk-4.1` in practice ([#35562](https://github.com/denoland/deno/issues/35562)); or ship `cef` |
 | P2 | Packaged embed paths for AppImage/dir layouts | Same as Windows packaging follow-up |
-| P2 | Tray on minimal WMs | AppIndicator may be absent → silent tray no-op |
+| — | Tray on minimal WMs | **Out of scope** — no `Deno.Tray` ([CONTEXT.md](../CONTEXT.md)) |
 
 ### C. Packaging-only (product ships after CI/signing work; code may already run under `deno desktop --hmr`)
 
@@ -197,9 +195,12 @@ Also honors `DEVSHELL_DATA_DIR` override and `HOME` / `USERPROFILE` — sensible
 | Linux: document WebKitGTK vs ship `cef` | Packaging/docs choice |
 | Windows auto-update story | Full reinstall / external updater until Deno supports swap |
 
-### D. Mobile (out of scope)
+### D. Product scope notes
 
-Documented for completeness only — not a Devshell workstream. Deno Desktop and Bun are desktop-OS-only today; product scope matches that ([CONTEXT.md](../CONTEXT.md)).
+- **Mobile:** out of scope ([CONTEXT.md](../CONTEXT.md)).
+- **Tray:** out of scope — no `Deno.Tray`.
+- **Clipboard:** Deno documents webview `navigator.clipboard` as the interim API ([Dialogs → Clipboard](https://docs.deno.com/runtime/desktop/dialogs/)). Control-UI “copy logs” calls `navigator.clipboard.writeText` from the button click (user gesture, local `Deno.serve` secure context). No OS CLI helpers. Visible failure message if copy fails.
+- **Windows symlinks:** tracked in https://github.com/bbtgnn/devshell/issues/4
 
 ---
 

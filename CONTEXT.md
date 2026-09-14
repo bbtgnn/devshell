@@ -6,7 +6,7 @@ Desktop orchestrator that syncs a GitHub-backed project, runs its install/dev to
 
 **In scope:** macOS, Windows, and Linux desktop.
 
-**Out of scope:** iOS and Android (native mobile shells, on-device Bun sidecar, mobile companion apps). Deno Desktop does not ship mobile targets; Devshell does not wait on them or adopt another shell for phones.
+**Out of scope:** iOS and Android (native mobile shells, on-device Bun sidecar, mobile companion apps). Deno Desktop does not ship mobile targets; Devshell does not wait on them or adopt another shell for phones. **System tray** is also out of scope — control and preview windows are the UX; do not add `Deno.Tray`.
 
 **Engine install:** If no Bun is found, Devshell downloads a pinned Bun build into the Data root on first launch (rather than requiring Bun inside the shipped app bundle).
 
