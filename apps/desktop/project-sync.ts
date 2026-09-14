@@ -19,7 +19,7 @@ export type SyncProjectResult = {
 	repos: CachedRepo[];
 };
 
-type ParsedGithub = {
+export type ParsedGithub = {
 	owner: string;
 	repo: string;
 	cloneUrl: string;
@@ -37,7 +37,7 @@ function removeIfExists(path: string): void {
 	}
 }
 
-function parseGithubInput(input: string, subdirectory = ""): ParsedGithub {
+export function parseGithubInput(input: string, subdirectory = ""): ParsedGithub {
 	const raw = input.trim();
 	let owner = "";
 	let repo = "";
@@ -144,32 +144,55 @@ async function ensureRepo(
 		if (existsSync(gitDir)) {
 			action = "pulled";
 			onLine(`cache hit → pull ${id} @ ${parsed.branch}`);
-			await git.fetch({
-				fs,
-				http,
-				dir: cloneDir,
-				remote: "origin",
-				ref: parsed.branch,
-				singleBranch: true,
-				depth: 1,
-				onProgress: onGitProgress(onLine, "fetch"),
-			});
-			const remoteRef = `refs/remotes/origin/${parsed.branch}`;
-			const oid = await git.resolveRef({ fs, dir: cloneDir, ref: remoteRef });
-			await git.writeRef({
+			const originUrl = await git.getConfig({
 				fs,
 				dir: cloneDir,
-				ref: `refs/heads/${parsed.branch}`,
-				value: oid,
-				force: true,
-			});
-			await git.checkout({
-				fs,
-				dir: cloneDir,
-				ref: parsed.branch,
-				force: true,
-			});
-			onLine(`pulled ${id} → ${oid.slice(0, 7)}`);
+				path: "remote.origin.url",
+			}).catch(() => undefined);
+			const canFetch =
+				typeof originUrl === "string" && /^https?:\/\//i.test(originUrl);
+
+			if (canFetch) {
+				await git.fetch({
+					fs,
+					http,
+					dir: cloneDir,
+					remote: "origin",
+					ref: parsed.branch,
+					singleBranch: true,
+					depth: 1,
+					onProgress: onGitProgress(onLine, "fetch"),
+				});
+				const remoteRef = `refs/remotes/origin/${parsed.branch}`;
+				const oid = await git.resolveRef({ fs, dir: cloneDir, ref: remoteRef });
+				await git.writeRef({
+					fs,
+					dir: cloneDir,
+					ref: `refs/heads/${parsed.branch}`,
+					value: oid,
+					force: true,
+				});
+				await git.checkout({
+					fs,
+					dir: cloneDir,
+					ref: parsed.branch,
+					force: true,
+				});
+				onLine(`pulled ${id} → ${oid.slice(0, 7)}`);
+			} else {
+				await git.checkout({
+					fs,
+					dir: cloneDir,
+					ref: parsed.branch,
+					force: true,
+				});
+				const oid = await git.resolveRef({
+					fs,
+					dir: cloneDir,
+					ref: parsed.branch,
+				});
+				onLine(`local cache ${id} → ${oid.slice(0, 7)}`);
+			}
 		} else {
 			action = "cloned";
 			onLine(`fresh clone ${parsed.cloneUrl} @ ${parsed.branch} → ${cloneDir}`);

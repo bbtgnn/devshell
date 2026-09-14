@@ -7,6 +7,7 @@
 		"test": "deno task --cwd apps/desktop test",
 		"smoke:resolve": "deno task --cwd apps/desktop smoke:resolve",
 		"smoke:bun-engine": "deno task --cwd apps/desktop smoke:bun-engine",
+		"smoke:sync": "deno task --cwd apps/desktop smoke:sync",
 		"smoke:bun-download": "deno task --cwd apps/desktop smoke:bun-download",
 		"smoke:pipeline": "deno task --cwd apps/desktop smoke:pipeline"
 	},

@@ -15,6 +15,7 @@
 		"smoke:bun-engine": "deno test -A smoke/bun-engine.test.ts",
 		"smoke:session": "deno test -A smoke/session.test.ts",
 		"smoke:process-tree": "deno test -A smoke/process-tree.test.ts",
+		"smoke:sync": "deno test -A smoke/project-sync.test.ts",
 		"smoke:bun-download": "deno run -A smoke/bun-download.ts",
 		"smoke:pipeline": "deno run -A smoke/pipeline.ts"
 	},
