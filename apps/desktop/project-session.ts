@@ -1,13 +1,20 @@
 import { existsSync } from "@std/fs";
 import { join } from "@std/path";
-import type { BunEngineInfo } from "./bun-engine.ts";
-import { ensureBunEngine } from "./bun-engine.ts";
+import type { BunEngineInfo, EnsureBunEngineOptions } from "./bun-engine.ts";
+import { ensureBunEngine as defaultEnsureBunEngine } from "./bun-engine.ts";
 import {
+	defaultProcessHost,
 	runCaptured,
 	spawnLiving,
 	type LivingProcess,
+	type ProcessHost,
 } from "./os/mod.ts";
-import { listCachedRepos, syncProject, type CachedRepo } from "./project-sync.ts";
+import {
+	listCachedRepos,
+	syncProject as defaultSyncProject,
+	type CachedRepo,
+	type SyncProjectResult,
+} from "./project-sync.ts";
 
 export type Phase =
 	| "idle"
@@ -42,6 +49,17 @@ export type ProjectSessionSnapshot = SessionState & {
 export type ProjectSessionOptions = {
 	dataRoot: string;
 	onPreviewUrl?: (url: string) => void;
+	processHost?: ProcessHost;
+	ensureBunEngine?: (
+		dataRoot: string,
+		opts?: EnsureBunEngineOptions,
+	) => Promise<BunEngineInfo>;
+	syncProject?: (
+		repoUrl: string,
+		subdirectory: string,
+		dataRoot: string,
+		onLine: (line: string) => void,
+	) => Promise<SyncProjectResult>;
 };
 
 export type WarmOptions = {
@@ -241,7 +259,13 @@ function extractLocalUrl(chunk: string): string | null {
 export function createProjectSession(
 	opts: ProjectSessionOptions,
 ): ProjectSession {
-	const { dataRoot, onPreviewUrl } = opts;
+	const {
+		dataRoot,
+		onPreviewUrl,
+		processHost = defaultProcessHost(),
+		ensureBunEngine = defaultEnsureBunEngine,
+		syncProject = defaultSyncProject,
+	} = opts;
 
 	let state: SessionState = {
 		...initialState(),
@@ -323,13 +347,17 @@ export function createProjectSession(
 				bunEngine: engine,
 			});
 
-			const install = await runCaptured(installCmd, {
-				cwd: dir,
-				onLine: (line) => {
-					if (token !== runToken) return;
-					dispatch({ type: "log", line });
+			const install = await runCaptured(
+				installCmd,
+				{
+					cwd: dir,
+					onLine: (line) => {
+						if (token !== runToken) return;
+						dispatch({ type: "log", line });
+					},
 				},
-			});
+				processHost,
+			);
 			if (token !== runToken) return;
 			if (!install.success) {
 				throw new Error(
@@ -342,21 +370,25 @@ export function createProjectSession(
 			dispatch({ type: "waiting_for_url" });
 
 			let found: string | null = null;
-			living = spawnLiving(devCmd, {
-				cwd: dir,
-				onChunk: (text) => {
-					if (token !== runToken) return;
-					for (const line of text.split(/\r?\n/)) {
-						if (line.trim()) dispatch({ type: "log", line });
-					}
-					const url = extractLocalUrl(text);
-					if (url && !found) {
-						found = url;
-						dispatch({ type: "preview_url", url });
-						onPreviewUrl?.(url);
-					}
+			living = spawnLiving(
+				devCmd,
+				{
+					cwd: dir,
+					onChunk: (text) => {
+						if (token !== runToken) return;
+						for (const line of text.split(/\r?\n/)) {
+							if (line.trim()) dispatch({ type: "log", line });
+						}
+						const url = extractLocalUrl(text);
+						if (url && !found) {
+							found = url;
+							dispatch({ type: "preview_url", url });
+							onPreviewUrl?.(url);
+						}
+					},
 				},
-			});
+				processHost,
+			);
 
 			void living.exited.then((status) => {
 				if (token !== runToken) return;
