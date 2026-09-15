@@ -7,7 +7,11 @@ export {
 	pathListSeparator,
 } from "./path-env.ts";
 export { spawnLiving, type LivingExit, type LivingProcess } from "./living.ts";
-export { runCaptured, type RunResult } from "./run-captured.ts";
+export {
+	runCaptured,
+	type CapturedRun,
+	type RunResult,
+} from "./run-captured.ts";
 export {
 	defaultProcessHost,
 	type ExitStatus,

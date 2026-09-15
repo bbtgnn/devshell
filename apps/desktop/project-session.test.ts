@@ -23,6 +23,11 @@ type FakeHostOptions = {
 	previewUrl?: string;
 };
 
+type StopRecord = {
+	pid: number;
+	kind: FakeProc["kind"];
+};
+
 type FakeProc = HostedProc & {
 	cmd: readonly string[];
 	kind: "install" | "dev" | "other";
@@ -30,6 +35,12 @@ type FakeProc = HostedProc & {
 	waitPromise: Promise<ExitStatus>;
 	stdoutCtrl: ReadableStreamDefaultController<Uint8Array> | null;
 	stderrCtrl: ReadableStreamDefaultController<Uint8Array> | null;
+	stopped: boolean;
+	finishTimer: ReturnType<typeof setTimeout> | null;
+};
+
+type FakeProcessHost = ProcessHost & {
+	readonly stops: readonly StopRecord[];
 };
 
 function cmdKind(cmd: readonly string[]): FakeProc["kind"] {
@@ -38,12 +49,16 @@ function cmdKind(cmd: readonly string[]): FakeProc["kind"] {
 	return "other";
 }
 
-function createFakeProcessHost(opts: FakeHostOptions = {}): ProcessHost {
+function createFakeProcessHost(opts: FakeHostOptions = {}): FakeProcessHost {
 	const enc = new TextEncoder();
 	const procs = new Map<number, FakeProc>();
+	const stops: StopRecord[] = [];
 	let nextPid = 1;
 
 	return {
+		get stops() {
+			return stops;
+		},
 		spawn(req) {
 			const kind = cmdKind(req.cmd);
 			let resolveWait!: (status: ExitStatus) => void;
@@ -58,39 +73,64 @@ function createFakeProcessHost(opts: FakeHostOptions = {}): ProcessHost {
 				waitPromise,
 				stdoutCtrl: null,
 				stderrCtrl: null,
+				stopped: false,
+				finishTimer: null,
 			};
 			procs.set(proc.pid, proc);
 
 			queueMicrotask(() => {
 				const live = procs.get(proc.pid);
-				if (!live) return;
+				if (!live || live.stopped) return;
 
 				if (kind === "install") {
 					const fail = opts.failInstall === true;
 					const finish = () => {
-						live.stderrCtrl?.enqueue(
-							enc.encode(
-								fail ? "bun install failed: lockfile\n" : "installed\n",
-							),
-						);
-						live.stdoutCtrl?.close();
-						live.stderrCtrl?.close();
+						live.finishTimer = null;
+						if (live.stopped) return;
+						try {
+							live.stderrCtrl?.enqueue(
+								enc.encode(
+									fail
+										? "bun install failed: lockfile\n"
+										: "installed\n",
+								),
+							);
+						} catch {
+							/* closed */
+						}
+						try {
+							live.stdoutCtrl?.close();
+						} catch {
+							/* closed */
+						}
+						try {
+							live.stderrCtrl?.close();
+						} catch {
+							/* closed */
+						}
 						live.resolveWait({
 							code: fail ? 1 : 0,
 							success: !fail,
 						});
 					};
 					const delay = opts.installDelayMs ?? 0;
-					if (delay > 0) setTimeout(finish, delay);
-					else finish();
+					if (delay > 0) {
+						live.finishTimer = setTimeout(finish, delay);
+					} else {
+						finish();
+					}
 					return;
 				}
 
 				if (kind === "dev") {
 					const url = opts.previewUrl ?? PREVIEW_URL;
-					live.stdoutCtrl?.enqueue(
-						enc.encode(`Local:   ${url}\n`),
-					);
+					try {
+						live.stdoutCtrl?.enqueue(
+							enc.encode(`Local:   ${url}\n`),
+						);
+					} catch {
+						/* closed */
+					}
 				}
 			});
 
@@ -117,7 +157,13 @@ function createFakeProcessHost(opts: FakeHostOptions = {}): ProcessHost {
 		},
 		async stop(p) {
 			const proc = procs.get(p.pid);
-			if (!proc) return;
+			if (!proc || proc.stopped) return;
+			proc.stopped = true;
+			stops.push({ pid: proc.pid, kind: proc.kind });
+			if (proc.finishTimer !== null) {
+				clearTimeout(proc.finishTimer);
+				proc.finishTimer = null;
+			}
 			try {
 				proc.stdoutCtrl?.close();
 			} catch {
@@ -231,23 +277,38 @@ Deno.test("project session install failure → failed", async () => {
 	assert(snap.canStart);
 });
 
-Deno.test("project session stop mid-flight → stopped", async () => {
+Deno.test("project session stop mid-install → ProcessHost.stop on install", async () => {
 	const dataRoot = await Deno.makeTempDir({ prefix: "devshell-data-" });
 	const workDir = await makeWorkDir();
+	const host = createFakeProcessHost({ installDelayMs: 2_000 });
 
 	const session = createProjectSession({
 		dataRoot,
-		processHost: createFakeProcessHost({ installDelayMs: 500 }),
-		ensureBunEngine: stubEnsureBun(80),
+		processHost: host,
+		ensureBunEngine: stubEnsureBun(),
 		syncProject: stubSync(workDir),
 	});
 
 	session.start("owner/repo");
-	await waitForPhase(session, ["resolving", "cloning", "installing"]);
+	await waitForPhase(session, "installing");
 	const stopped = session.stop();
 	assertEquals(stopped.phase, "stopped");
 
-	await new Promise((r) => setTimeout(r, 200));
+	const deadline = Date.now() + 1_000;
+	while (Date.now() < deadline && host.stops.length === 0) {
+		await new Promise((r) => setTimeout(r, 20));
+	}
+
+	assert(
+		host.stops.some((s) => s.kind === "install"),
+		`expected ProcessHost.stop on install, got ${JSON.stringify(host.stops)}`,
+	);
+	assertEquals(
+		host.stops.filter((s) => s.kind === "dev").length,
+		0,
+		"living Guest must not have started",
+	);
+	await new Promise((r) => setTimeout(r, 100));
 	assertEquals(session.snapshot().phase, "stopped");
 });
 

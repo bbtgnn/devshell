@@ -6,6 +6,7 @@ import {
 	defaultProcessHost,
 	runCaptured,
 	spawnLiving,
+	type CapturedRun,
 	type LivingProcess,
 	type ProcessHost,
 } from "./os/mod.ts";
@@ -272,6 +273,7 @@ export function createProjectSession(
 		cachedRepos: listCachedRepos(dataRoot),
 	};
 	let living: LivingProcess | null = null;
+	let captured: CapturedRun | null = null;
 	let runToken = 0;
 
 	function snapshot(): ProjectSessionSnapshot {
@@ -294,14 +296,19 @@ export function createProjectSession(
 		return snapshot();
 	}
 
-	async function stopLiving() {
-		const current = living;
+	async function stopGuestProcesses() {
+		const currentCaptured = captured;
+		captured = null;
+		const currentLiving = living;
 		living = null;
-		if (current) await current.stop();
+		await Promise.all([
+			currentCaptured ? currentCaptured.stop() : Promise.resolve(),
+			currentLiving ? currentLiving.stop() : Promise.resolve(),
+		]);
 	}
 
 	async function runPipeline(token: number) {
-		await stopLiving();
+		await stopGuestProcesses();
 		if (token !== runToken) return;
 
 		try {
@@ -347,7 +354,7 @@ export function createProjectSession(
 				bunEngine: engine,
 			});
 
-			const install = await runCaptured(
+			captured = runCaptured(
 				installCmd,
 				{
 					cwd: dir,
@@ -358,6 +365,8 @@ export function createProjectSession(
 				},
 				processHost,
 			);
+			const install = await captured.result;
+			captured = null;
 			if (token !== runToken) return;
 			if (!install.success) {
 				throw new Error(
@@ -405,7 +414,7 @@ export function createProjectSession(
 			});
 		} catch (err) {
 			if (token !== runToken) return;
-			await stopLiving();
+			await stopGuestProcesses();
 			dispatch({
 				type: "fail",
 				error: err instanceof Error ? err.message : String(err),
@@ -427,12 +436,12 @@ export function createProjectSession(
 		},
 		stop() {
 			runToken++;
-			void stopLiving();
+			void stopGuestProcesses();
 			return dispatch({ type: "stop" });
 		},
 		reset() {
 			runToken++;
-			void stopLiving();
+			void stopGuestProcesses();
 			return dispatch({ type: "reset" });
 		},
 		snapshot,
