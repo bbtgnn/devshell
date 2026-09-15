@@ -41,10 +41,14 @@ _Avoid_: embedded browser chrome, system browser tab (unless deliberately opened
 **Control window**:
 The Devshell window for open/sync/run/stop, status, and logs.
 
+**Desktop shell**:
+Owns Control and Preview windows, control HTTP, and the single Preview-open path (session URL emit and Control reopen). Boots Project session warm; does not own the pipeline.
+_Avoid_: Electrobun; putting install/dev/sync in the shell
+
 **Project session**:
 The module that opens a Project end-to-end: warm the Bun engine for the Data root, sync into the Work root, install, run Guest `dev`, and emit preview URL, logs, terminal phases, and cancel. Owns “is the Bun engine ready?” (boot warm-up and pipeline ensure); Control starts/stops/reads a snapshot; Preview window chrome stays outside.
 Phases (Control `phase` string): `idle` → `resolving` (Bun engine) → `cloning` (sync) → `installing` → `starting` → `waiting_for_url` → `previewing`, or `failed` / `stopped`.
-_Avoid_: treating Control bindings or `main` as the pipeline owner; `main` calling Bun ensure directly
+_Avoid_: treating Control bindings or the Desktop shell as the pipeline owner; the Desktop shell calling Bun ensure directly
 
 **Guest app**:
 The Project's running `dev` process, which may call Devshell over a loopback API later.
